@@ -8,8 +8,24 @@
     "url": "git@github.com:yimian/vue-hamlet.git"
   },
   "scripts": {
+    "prepublish": "./node_modules/.bin/babel src --out-dir lib",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "MIT"
+  "author": [
+    {
+      "name": "zhangjinjie"
+    },
+    {
+      "name": "zed"
+    }
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-loader": "^6.2.10",
+    "babel-plugin-transform-runtime": "^6.22.0",
+    "babel-preset-env": "^1.2.1",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-stage-2": "^6.22.0"
+  }
 }
