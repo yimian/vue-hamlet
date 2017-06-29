@@ -28,7 +28,8 @@ export default class Auth {
     this._http = Vue.http;
     this._store = Vue.store;
     this._router = Vue.router;
-    this._loaded = false;  // fetch用户信息后，变为true，开始刷新；退出时，置为false；
+    // fetch用户信息后，变为true，开始刷新；退出时，置为false；
+    this._loaded = false;
 
     // options
     const defaultOptions = {
@@ -93,7 +94,8 @@ export default class Auth {
       }
       // 需要认证时，检查权限是否满足
       if (auth) {
-        if (!this._store.state.auth.token) {  // 未获得token
+        // 未获得token
+        if (!this._store.state.auth.token) {
           // 当路由重定向到登陆页面， 附带重定向的页面值
           next({ path: this.options.authRedirect, query: { redirectedFrom: to.redirectedFrom } });
         } else {
@@ -112,7 +114,8 @@ export default class Auth {
             } else {
               next(this.options.authRedirect);
             }
-          }, () => {  // 获取用户信息失败，跳转到登录页面
+          }, () => {
+            // 获取用户信息失败，跳转到登录页面
             next(this.options.authRedirect);
           });
         }
@@ -120,9 +123,11 @@ export default class Auth {
 
       // 不需要认证时，如果存在token，则更新一次用户信息
       if (this._store.state.auth.token) {
-        this.fetch().then(() => {  // token有效，跳转
+        this.fetch().then(() => {
+          // token有效，跳转
           next();
-        }).catch(() => {  // token失效，清除token
+        }).catch(() => {
+          // token失效，清除token
           this._store.commit(types.CLEAR_TOKENS);
           next();
         });
@@ -208,16 +213,16 @@ export default class Auth {
     const _this = this;
     return this._http.get(url, { params: { refresh_token: _this._store.state.auth.refresh_token } })
       .then(
-      (res) => {
-        if (res.body.ok) {
-          _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
-          return res;
-        }
-        return Promise.reject(res);
-      },
-      (res) => {
-        console.warn('refresh token failed,', res);
-      },
-    );
+        (res) => {
+          if (res.body.ok) {
+            _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
+            return res;
+          }
+          return Promise.reject(res);
+        },
+        (res) => {
+          console.warn('refresh token failed,', res);
+        },
+      );
   }
 }
