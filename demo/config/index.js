@@ -1,6 +1,6 @@
 // see http://vuejs-templates.github.io/webpack for documentation.
 var path = require('path')
-var commonApi = '172.16.24.93:17510';
+var commonApi = 'http://172.16.24.93:17510';
 
 module.exports = {
   build: {
