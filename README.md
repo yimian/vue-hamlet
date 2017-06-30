@@ -1,8 +1,8 @@
 # Vue Hamlet
 vue-hamlet is used as authentication for frontend.
 
-## Index
-* [Install](#install)
+## Index
+* [Install](#install)
 * [Demo](#demo)
 
 ## Install
