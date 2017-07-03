@@ -1,6 +1,7 @@
 <template>
   <div>
     <h1>Login</h1>
+    <label for="">Users: </label>
     <select v-model="selectedUser">
       <option v-for="user in users"
         :key="user.username"
