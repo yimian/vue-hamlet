@@ -4,6 +4,7 @@ vue-hamlet is used as authentication for frontend.
 ## Index
 * [Install](#install)
 * [Demo](#demo)
+# [Configuration](#configuration)
 
 ## Install
 Install repository into your project.
@@ -40,4 +41,25 @@ npm install
 ~~~
 ~~~
 npm run dev
+~~~
+
+
+## Configuration
+Default Configuration:
+~~~
+fetchUser: '/api/auth/me',
+appKey: '',
+authType: 'Bearer',
+hamletPrefix: '/api/auth',
+authRedirect: '/login',
+refreshInterval: 10, // mins
+forbiddenRedirect: '/403',
+notFoundRedirect: '/404',
+~~~
+
+You can rewrite default configuration in your project like:
+~~~
+Vue.use(auth, {
+  appKey: '',
+});
 ~~~
