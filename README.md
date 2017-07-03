@@ -4,7 +4,7 @@ vue-hamlet is used as authentication for frontend.
 ## Index
 * [Install](#install)
 * [Demo](#demo)
-# [Configuration](#configuration)
+* [Configuration](#configuration)
 
 ## Install
 Install repository into your project.
