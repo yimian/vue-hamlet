@@ -1,11 +1,10 @@
 <template>
-  <div class="admin">
-    Only admin can access
-  </div>
+  <div>403</div>
 </template>
 
 <script>
 export default {
+
 };
 </script>
 

@@ -36,17 +36,24 @@
         },
       };
     },
+    beforeRouteEnter(to, from, next) {
+      console.log('>>>>> route', to, from);
+      next((vm) => {
+        if (vm.$auth.ready()) {
+          vm.$router.push({ name: 'forbidden' });
+        }
+      });
+    },
     watch: {
       selectedUser(n) {
         const user = this.users.find(item => item.username === n);
-        this.loginUser.username = user.username;
-        this.loginUser.password = user.password;
+        this.loginUser = Object.assign({}, user);
       },
     },
     methods: {
       login() {
         this.$auth.login(this.loginUser).then(() => {
-          this.$router.push({ name: 'index' });
+          this.$router.push({ name: 'account' });
         }, (res) => {
           console.log('>>>> ', JSON.stringify(res));
         });

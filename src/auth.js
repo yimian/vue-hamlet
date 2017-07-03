@@ -38,6 +38,8 @@ export default class Auth {
       hamletPrefix: '/api/auth',
       authRedirect: '/login',
       refreshInterval: 10, // mins
+      forbiddenRedirect: '/403',
+      notFoundRedirect: '/404',
     };
     this.options = Object.assign({}, defaultOptions, options);
     this.options.fetchUser = this.options.fetchUser || this.url('me');
@@ -87,6 +89,11 @@ export default class Auth {
 
     // 注册路由，实现当跳转到需要验证的url时，自动检查认证状态，如果失败，跳转到登录页面
     Vue.router.beforeEach((to, from, next) => {
+      // not matched route redirect to notFound route
+      console.log('>>>> to: ', to);
+      if (to.matched.length === 0) {
+        next(this.options.notFoundRedirect);
+      }
       let auth = false;
       const authRoutes = to.matched.filter(route => 'auth' in route.meta);
       if (authRoutes.length) {
@@ -105,7 +112,7 @@ export default class Auth {
               if (auth.indexOf(user.role) !== -1) {
                 next();
               } else {
-                next(this.options.authRedirect);
+                next(this.options.forbiddenRedirect);
               }
             } else if (auth === user.role) {
               next();

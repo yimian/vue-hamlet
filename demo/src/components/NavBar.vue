@@ -1,8 +1,9 @@
 <template>
   <div class="navbar">
     <router-link :to="{ name: 'index' }" tag="li">Home</router-link>
-    <router-link :to="{ name: 'login' }" tag="li">Login</router-link>
-    <li @click="logout">Logout</li>
+    <router-link :to="{ name: 'admin' }" tag="li">Admin</router-link>
+    <router-link :to="{ name: 'login' }" tag="li" v-if="!$auth.ready()">Login</router-link>
+    <li v-else @click="logout">Logout</li>
   </div>
 </template>
 
