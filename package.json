@@ -2,7 +2,7 @@
   "name": "vue-hamlet",
   "version": "1.0.0",
   "description": "hamlet auth component for frontend",
-  "main": "src/index.js",
+  "main": "lib/index.js",
   "repository": {
     "type": "git",
     "url": "git@github.com:yimian/vue-hamlet.git"
