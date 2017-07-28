@@ -40,6 +40,7 @@ export default class Auth {
       refreshInterval: 10, // mins
       forbiddenRedirect: '/403',
       notFoundRedirect: '/404',
+      allowThirdpartyLogin: false,
     };
     this.options = Object.assign({}, defaultOptions, options);
     this.options.fetchUser = this.options.fetchUser || this.url('me');
@@ -99,6 +100,14 @@ export default class Auth {
       if (authRoutes.length) {
         auth = authRoutes[authRoutes.length - 1].meta.auth;
       }
+
+      // 当用户通过第三方登录时,拿到URL中的token和access_token, 存入localstorage, 重定向至去除token信息的URL 
+      if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_access_token && to.query.thirdparty_connect_refresh_token) {
+        this._store.commit(types.SET_TOKEN, to.query.thirdparty_connect_access_token);
+        this._store.commit(types.SET_REFRESH_TOKEN, to.query.thirdparty_connect_refresh_token);
+        next({ path: to.path });
+      }
+
       // 需要认证时，检查权限是否满足
       if (auth) {
         // 未获得token
