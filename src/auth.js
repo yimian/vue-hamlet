@@ -108,6 +108,11 @@ export default class Auth {
         next({ path: to.path });
       }
 
+      // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的URL 
+      if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_ok) {
+        next({ path: to.path });
+      }
+
       // 需要认证时，检查权限是否满足
       if (auth) {
         // 未获得token
