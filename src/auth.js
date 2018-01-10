@@ -101,14 +101,14 @@ export default class Auth {
         auth = authRoutes[authRoutes.length - 1].meta.auth;
       }
 
-      // 当用户通过第三方登录时,拿到URL中的token和access_token, 存入localstorage, 重定向至去除token信息的URL 
+      // 当用户通过第三方登录时,拿到URL中的token和access_token, 存入localstorage, 重定向至去除token信息的URL
       if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_access_token && to.query.thirdparty_connect_refresh_token) {
         this._store.commit(types.SET_TOKEN, to.query.thirdparty_connect_access_token);
         this._store.commit(types.SET_REFRESH_TOKEN, to.query.thirdparty_connect_refresh_token);
         next({ path: to.path });
       }
 
-      // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的URL 
+      // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的URL
       if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_ok) {
         next({ path: to.path });
       }
@@ -140,10 +140,8 @@ export default class Auth {
             next(this.options.authRedirect);
           });
         }
-      }
-
-      // 不需要认证时，如果存在token，则更新一次用户信息
-      if (this._store.state.auth.token) {
+      } else if (this._store.state.auth.token) {
+        // 不需要认证时，如果存在token，则更新一次用户信息
         this.fetch().then(() => {
           // token有效，跳转
           next();
