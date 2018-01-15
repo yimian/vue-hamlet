@@ -1,7 +1,7 @@
 {
   "name": "vue-hamlet",
   "version": "1.0.1",
-  "description": "hamlet auth component for frontend",
+  "description": "hamlet auth component for frontend ",
   "main": "lib/index.js",
   "repository": {
     "type": "git",
