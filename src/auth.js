@@ -185,7 +185,6 @@ export default class Auth {
     const url = this.url('login');
     const _this = this;
     const __randNum = Math.random();
-
     return this._http.post(url, { username, password }, { params: { __randNum } })
     .then((res) => {
       if (res.body.ok) {
@@ -210,7 +209,6 @@ export default class Auth {
     const url = this.options.fetchUser;
     const _this = this;
     const __randNum = Math.random();
-
     return this._http.get(url, {
       before(req) { req._noauth = true; },
       params: { __randNum }
@@ -229,7 +227,6 @@ export default class Auth {
     const url = this.url('logout');
     const _this = this;
     const __randNum = Math.random();
-
     return this._http.post(url, {}, { params: { __randNum } })
     .then(() => {
       _this._store.commit(types.CLEAR_TOKENS);
@@ -242,6 +239,7 @@ export default class Auth {
   refresh() {
     const url = this.url('refresh');
     const _this = this;
+    const __randNum = Math.random();
     return this._http.get(url, {
       params: {
         refresh_token: _this._store.state.auth.refresh_token,
