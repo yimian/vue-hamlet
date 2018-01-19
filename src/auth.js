@@ -184,7 +184,10 @@ export default class Auth {
   login({ username, password }) {
     const url = this.url('login');
     const _this = this;
-    return this._http.post(url, { username, password }).then((res) => {
+    const __randNum = Math.random();
+
+    return this._http.post(url, { username, password }, { params: { __randNum } })
+    .then((res) => {
       if (res.body.ok) {
         _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
         _this._store.commit(types.SET_REFRESH_TOKEN, res.body.data.refresh_token);
@@ -206,7 +209,13 @@ export default class Auth {
   fetch() {
     const url = this.options.fetchUser;
     const _this = this;
-    return this._http.get(url, { before(req) { req._noauth = true; } }).then((res) => {
+    const __randNum = Math.random();
+
+    return this._http.get(url, {
+      before(req) { req._noauth = true; },
+      params: { __randNum }
+    })
+    .then((res) => {
       if (res.body.ok) {
         _this._store.commit(types.SET_USER, res.body.data.user);
         _this._loaded = true;
@@ -219,7 +228,10 @@ export default class Auth {
   logout() {
     const url = this.url('logout');
     const _this = this;
-    return this._http.post(url).then(() => {
+    const __randNum = Math.random();
+
+    return this._http.post(url, {}, { params: { __randNum } })
+    .then(() => {
       _this._store.commit(types.CLEAR_TOKENS);
       _this._loaded = false;
     }, (res) => {
@@ -230,18 +242,23 @@ export default class Auth {
   refresh() {
     const url = this.url('refresh');
     const _this = this;
-    return this._http.get(url, { params: { refresh_token: _this._store.state.auth.refresh_token } })
-      .then(
-        (res) => {
-          if (res.body.ok) {
-            _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
-            return res;
-          }
-          return Promise.reject(res);
-        },
-        (res) => {
-          console.warn('refresh token failed,', res);
-        },
-      );
+    return this._http.get(url, {
+      params: {
+        refresh_token: _this._store.state.auth.refresh_token,
+        __randNum
+      }
+    })
+    .then(
+      (res) => {
+        if (res.body.ok) {
+          _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
+          return res;
+        }
+        return Promise.reject(res);
+      },
+      (res) => {
+        console.warn('refresh token failed,', res);
+      },
+    );
   }
 }
