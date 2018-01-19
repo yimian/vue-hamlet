@@ -1,6 +1,6 @@
 {
   "name": "vue-hamlet",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "hamlet auth component for frontend ",
   "main": "lib/index.js",
   "repository": {
