@@ -4,6 +4,7 @@ vue-hamlet is used as authentication for frontend.
 ## Index
 * [Install](#install)
 * [Demo](#demo)
+* [TODO](#white_check_mark-todo)
 * [Configuration](#configuration)
 
 ## Install
@@ -30,6 +31,9 @@ Vue.use(auth, {
 
 sync(store, router);
 ~~~
+
+## :white_check_mark: TODO
+- mod: change VueResource to axios.
 
 ## Demo
 Run demo project with following procedures:
