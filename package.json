@@ -1,16 +1,22 @@
 {
   "name": "vue-hamlet",
-  "version": "1.0.2",
+  "version": "1.0.2-rc.0",
   "description": "hamlet auth component for frontend ",
   "main": "lib/index.js",
-  "repository": {
-    "type": "git",
-    "url": "git@github.com:yimian/vue-hamlet.git"
-  },
   "scripts": {
     "prepublish": "./node_modules/.bin/babel src --out-dir lib",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:yimian/vue-hamlet.git"
+  },
+  "keywords": [
+    "vue",
+    "ym",
+    "vue-hamlet",
+    "hamlet"
+  ],
   "author": {
     "name": "zhangjinjie"
   },
