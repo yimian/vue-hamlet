@@ -7,9 +7,9 @@ import * as types from './store/types';
 
 export default class Auth {
   constructor(Vue, options = {}) {
-    // check Vue-resource, Vue-router, Vuex used
-    if (!Vue.http) {
-      console.error('Vue resource must be set first');
+    // check Axios, Vue-router, Vuex used
+    if (!Vue.$http && !Vue.prototype.$http) {
+      console.error('Axios must be set first');
       return;
     }
 
@@ -25,9 +25,11 @@ export default class Auth {
 
     // set variables;
     this._Vue = Vue;
-    this._http = Vue.http;
+    this._http = Vue.$http || Vue.prototype.$http;
+    // console.log('Vue.prototype.$http', Vue.prototype.$http);
     this._store = Vue.store;
     this._router = Vue.router;
+
     // fetch用户信息后，变为true，开始刷新；退出时，置为false；
     this._loaded = false;
 
@@ -53,19 +55,22 @@ export default class Auth {
       console.error('must set app key first');
       return;
     }
+
     this._store.commit(types.SET_APPKEY, options.appKey); // 必须在register store后面执行
 
     // register http interceptors
-    Vue.http.interceptors.push((request, next) => {
+    Vue.prototype.$http.interceptors.request.use((request) => {
+      console.log('request', request);
       // 判断是否是hamlet请求，如果是添加app_key
       if (request.url.indexOf(this.options.hamletPrefix) !== -1) {
         const appKey = this._store.state.auth.appKey;
-        if (['POST', 'PUT'].indexOf(request.method) !== -1) {
-          request.body = Object.assign(
-            request.body || {},
+        const method = request.method && request.method.toUpperCase();
+        if (['POST', 'PUT'].indexOf(method) !== -1) {
+          request.data = Object.assign(
+            request.data || {},
             { app_key: appKey },
           );
-        } else if (['GET'].indexOf(request.method) !== -1) {
+        } else if (['GET'].indexOf(method) !== -1) {
           request.params = Object.assign(
             request.params || {},
             { app_key: appKey },
@@ -75,17 +80,22 @@ export default class Auth {
 
       // 判断是否包含token，如果有，则加到header里面
       const token = this._store.state.auth.token;
+
       if (token) {
         request.headers.set('Authorization', `${this.options.authType} ${token}`);
       }
 
-      next((res) => {
-        // 当发现返回码为401时，跳转到登陆页面
-        if (res.status === 401 && !request._noauth) {
-          console.debug('unauthorized, jump to login page');
-          this._router.push(this.options.authRedirect);
-        }
-      });
+      return request;
+    });
+
+    Vue.prototype.$http.interceptors.request.use((res) => {
+      // 当发现返回码为401时，跳转到登陆页面
+      if (res.status === 401 && !request._noauth) {
+        console.debug('unauthorized, jump to login page');
+        this._router.push(this.options.authRedirect);
+      }
+
+      return res;
     });
 
     // 注册路由，实现当跳转到需要验证的url时，自动检查认证状态，如果失败，跳转到登录页面
@@ -97,6 +107,7 @@ export default class Auth {
       }
       let auth = false;
       const authRoutes = to.matched.filter(route => 'auth' in route.meta);
+
       if (authRoutes.length) {
         auth = authRoutes[authRoutes.length - 1].meta.auth;
       }
@@ -178,6 +189,7 @@ export default class Auth {
     if (this._store.state.auth.user) {
       return true;
     }
+
     return false;
   }
 
@@ -219,6 +231,7 @@ export default class Auth {
         _this._loaded = true;
         return res;
       }
+
       return Promise.reject(res);
     });
   }
