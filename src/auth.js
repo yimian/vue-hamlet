@@ -40,7 +40,9 @@ export default class Auth {
       authType: 'Bearer',
       hamletPrefix: '/api/auth',
       authRedirect: '/login',
-      refreshInterval: 10, // mins
+
+      // mins
+      refreshInterval: 10,
       forbiddenRedirect: '/403',
       notFoundRedirect: '/404',
       allowThirdpartyLogin: false,
@@ -62,12 +64,11 @@ export default class Auth {
 
     // register http interceptors
     this._http.interceptors.request.use((request) => {
-      console.log('request', request);
+      // console.log('request', request);
       // 判断是否是hamlet请求，如果是添加app_key
       if (request.url.indexOf(this.options.hamletPrefix) !== -1) {
         const appKey = this._store.state.auth.appKey;
         const method = request.method && request.method.toUpperCase();
-
         if (['POST', 'PUT'].indexOf(method) !== -1) {
           request.data = Object.assign(
             request.data || {},
@@ -93,7 +94,7 @@ export default class Auth {
     });
 
     this._http.interceptors.response.use((res) => {
-      console.log('response', res);
+      // console.log('response', res);
       // 当发现返回码为401时，跳转到登陆页面
       if (res.status === 401 && !request._noauth) {
         console.debug('unauthorized, jump to login page');
@@ -151,9 +152,7 @@ export default class Auth {
               } else {
                 next(this.options.forbiddenRedirect);
               }
-            } else if (auth === user.role) {
-              next();
-            } else if (auth === true) {
+            } else if (auth === user.role || auth === true) {
               next();
             } else {
               next(this.options.authRedirect);
@@ -201,11 +200,7 @@ export default class Auth {
   }
 
   ready() {
-    if (this._store.state.auth.user) {
-      return true;
-    }
-
-    return false;
+    return !!this._store.state.auth.user;
   }
 
   login({ username, password }) {
@@ -215,9 +210,11 @@ export default class Auth {
     return this._http.post(url, { username, password }, { params: { __randNum } })
       .then((res) => {
         // console.log('login successful', res);
-        if (res.data.ok) {
-          _this._store.commit(types.SET_TOKEN, res.data.data.access_token);
-          _this._store.commit(types.SET_REFRESH_TOKEN, res.data.data.refresh_token);
+        const data = res.data;
+
+        if (data.ok) {
+          _this._store.commit(types.SET_TOKEN, data.data.access_token);
+          _this._store.commit(types.SET_REFRESH_TOKEN, data.data.refresh_token);
 
           // 登录时自动获取user信息
           return _this.fetch();
