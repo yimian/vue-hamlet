@@ -89,7 +89,7 @@ export default class Auth {
       const token = this._store.state.auth.token;
 
       if (token) {
-        request.headers['Authorization'] = `${this.options.authType} ${token}`;
+        request.headers.Authorization = `${this.options.authType} ${token}`;
         // this._http.defaults.headers.common['Authorization'] = `${this.options.authType} ${token}`;
       }
 
@@ -214,8 +214,8 @@ export default class Auth {
     const __randNum = Math.random();
     return this._http.post(url,
       { username, password },
-      { params: { __randNum },
-    })
+      { params: { __randNum } },
+    )
       .then((res) => {
         // console.log('login successful', res);
         const data = res.data;
@@ -229,9 +229,6 @@ export default class Auth {
         }
 
         return Promise.reject(res);
-      })
-      .catch((res) => {
-        console.log('login failed:', res);
       });
   }
 
@@ -299,4 +296,4 @@ export default class Auth {
         console.warn('refresh token failed,', res);
       });
   }
-};
+}
