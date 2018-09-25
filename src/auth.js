@@ -96,14 +96,14 @@ export default class Auth {
     this._http.interceptors.response.use((res) => {
       // console.log('response', res);
       // 当发现返回码为401时，跳转到登陆页面
-      if (res.status === 401 && !request._noauth) {
+      if (res.status === 401 && (!res.config || !res.config.headers || !res.config.headers._noauth)) {
         console.debug('unauthorized, jump to login page');
         this._router.push(this.options.authRedirect);
       }
 
       return Promise.resolve(res);
     }, (error) => {
-      console.log('error', error);
+      console.error('error', error);
       return Promise.reject(error);
     });
 
@@ -115,8 +115,8 @@ export default class Auth {
         next(this.options.notFoundRedirect);
       }
 
-      const query = to.query;
       let auth = false;
+      const query = to.query;
       const authRoutes = to.matched.filter(route => 'auth' in route.meta);
 
       if (authRoutes.length) {
@@ -137,11 +137,13 @@ export default class Auth {
         next({ path: to.path });
       }
 
+      const token = this._store.state.auth.token;
+
       // 需要认证时，检查权限是否满足
       if (auth) {
         // 未获得token
-        if (!this._store.state.auth.token) {
-          // 当路由重定向到登陆页面， 附带重定向的页面值
+        if (!token) {
+          // 当路由重定向到登陆页面，附带重定向的页面值
           next({ path: this.options.authRedirect, query: { redirectedFrom: to.redirectedFrom } });
         } else {
           this.fetch().then(() => {
@@ -162,7 +164,7 @@ export default class Auth {
             next(this.options.authRedirect);
           });
         }
-      } else if (this._store.state.auth.token) {
+      } else if (token) {
         // 不需要认证时，如果存在token，则更新一次用户信息
         this.fetch().then(() => {
           // token有效，跳转
@@ -207,7 +209,10 @@ export default class Auth {
     const url = this.url('login');
     const _this = this;
     const __randNum = Math.random();
-    return this._http.post(url, { username, password }, { params: { __randNum } })
+    return this._http.post(url,
+      { username, password },
+      { params: { __randNum },
+    })
       .then((res) => {
         // console.log('login successful', res);
         const data = res.data;
@@ -240,18 +245,21 @@ export default class Auth {
     const _this = this;
     const __randNum = Math.random();
     return this._http.get(url, {
-      before(req) { req._noauth = true; },
+      transformRequest(req, headers) {
+        headers._noauth = true;
+        return req;
+      },
       params: { __randNum },
     })
-    .then((res) => {
-      if (res.data.ok) {
-        _this._store.commit(types.SET_USER, res.data.data.user);
-        _this._loaded = true;
-        return res;
-      }
+      .then((res) => {
+        if (res.data.ok) {
+          _this._store.commit(types.SET_USER, res.data.data.user);
+          _this._loaded = true;
+          return res;
+        }
 
-      return Promise.reject(res);
-    });
+        return Promise.reject(res);
+      });
   }
 
   logout() {
@@ -259,12 +267,12 @@ export default class Auth {
     const _this = this;
     const __randNum = Math.random();
     return this._http.post(url, {}, { params: { __randNum } })
-    .then(() => {
-      _this._store.commit(types.CLEAR_TOKENS);
-      _this._loaded = false;
-    }, (res) => {
-      console.warn('logout failed', res);
-    });
+      .then(() => {
+        _this._store.commit(types.CLEAR_TOKENS);
+        _this._loaded = false;
+      }, (res) => {
+        console.warn('logout failed', res);
+      });
   }
 
   refresh() {
@@ -277,16 +285,15 @@ export default class Auth {
         __randNum,
       },
     })
-    .then((res) => {
-      if (res.data.ok) {
-        _this._store.commit(types.SET_TOKEN, res.data.data.access_token);
-        return res;
-      }
+      .then((res) => {
+        if (res.data.ok) {
+          _this._store.commit(types.SET_TOKEN, res.data.data.access_token);
+          return res;
+        }
 
-      return Promise.reject(res);
-    }, (res) => {
+        return Promise.reject(res);
+      }, (res) => {
         console.warn('refresh token failed,', res);
-      },
-    );
+      });
   }
 };
