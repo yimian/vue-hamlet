@@ -24,9 +24,12 @@ export default class Auth {
 
     // set variables;
     this._Vue = Vue;
-    const instance = (Vue.$http || Vue.prototype.$http).create();
+    const instance = (Vue.$http || Vue.prototype.$http).create({
+      headers: {
+        'content-type': options.contentType || 'application/json;charset=utf-8',
+      },
+    });
 
-    instance.defaults.headers.post['Content-Type'] = 'application/json;charset=utf-8';
     this._http = instance;
     this._store = Vue.store;
     this._router = Vue.router;
