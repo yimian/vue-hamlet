@@ -4,12 +4,11 @@
 import store from './store';
 import * as types from './store/types';
 
-
 export default class Auth {
   constructor(Vue, options = {}) {
-    // check Vue-resource, Vue-router, Vuex used
-    if (!Vue.http) {
-      console.error('Vue resource must be set first');
+    // check Axios, Vue-router, Vuex used
+    if (!Vue.$http && !Vue.prototype.$http) {
+      console.error('Axios must be set first');
       return;
     }
 
@@ -25,9 +24,13 @@ export default class Auth {
 
     // set variables;
     this._Vue = Vue;
-    this._http = Vue.http;
+    const instance = (Vue.$http || Vue.prototype.$http).create();
+
+    instance.defaults.headers.post['Content-Type'] = 'application/json;charset=utf-8';
+    this._http = instance;
     this._store = Vue.store;
     this._router = Vue.router;
+
     // fetch用户信息后，变为true，开始刷新；退出时，置为false；
     this._loaded = false;
 
@@ -53,19 +56,24 @@ export default class Auth {
       console.error('must set app key first');
       return;
     }
-    this._store.commit(types.SET_APPKEY, options.appKey); // 必须在register store后面执行
+
+    // 必须在register store后面执行
+    this._store.commit(types.SET_APPKEY, options.appKey);
 
     // register http interceptors
-    Vue.http.interceptors.push((request, next) => {
+    this._http.interceptors.request.use((request) => {
+      console.log('request', request);
       // 判断是否是hamlet请求，如果是添加app_key
       if (request.url.indexOf(this.options.hamletPrefix) !== -1) {
         const appKey = this._store.state.auth.appKey;
-        if (['POST', 'PUT'].indexOf(request.method) !== -1) {
-          request.body = Object.assign(
-            request.body || {},
+        const method = request.method && request.method.toUpperCase();
+
+        if (['POST', 'PUT'].indexOf(method) !== -1) {
+          request.data = Object.assign(
+            request.data || {},
             { app_key: appKey },
           );
-        } else if (['GET'].indexOf(request.method) !== -1) {
+        } else if (['GET'].indexOf(method) !== -1) {
           request.params = Object.assign(
             request.params || {},
             { app_key: appKey },
@@ -75,17 +83,27 @@ export default class Auth {
 
       // 判断是否包含token，如果有，则加到header里面
       const token = this._store.state.auth.token;
+
       if (token) {
-        request.headers.set('Authorization', `${this.options.authType} ${token}`);
+        request.headers['Authorization'] = `${this.options.authType} ${token}`;
+        // this._http.defaults.headers.common['Authorization'] = `${this.options.authType} ${token}`;
       }
 
-      next((res) => {
-        // 当发现返回码为401时，跳转到登陆页面
-        if (res.status === 401 && !request._noauth) {
-          console.debug('unauthorized, jump to login page');
-          this._router.push(this.options.authRedirect);
-        }
-      });
+      return request;
+    });
+
+    this._http.interceptors.response.use((res) => {
+      console.log('response', res);
+      // 当发现返回码为401时，跳转到登陆页面
+      if (res.status === 401 && !request._noauth) {
+        console.debug('unauthorized, jump to login page');
+        this._router.push(this.options.authRedirect);
+      }
+
+      return Promise.resolve(res);
+    }, (error) => {
+      console.log('error', error);
+      return Promise.reject(error);
     });
 
     // 注册路由，实现当跳转到需要验证的url时，自动检查认证状态，如果失败，跳转到登录页面
@@ -95,21 +113,26 @@ export default class Auth {
       if (to.matched.length === 0) {
         next(this.options.notFoundRedirect);
       }
+
+      const query = to.query;
       let auth = false;
       const authRoutes = to.matched.filter(route => 'auth' in route.meta);
+
       if (authRoutes.length) {
         auth = authRoutes[authRoutes.length - 1].meta.auth;
       }
 
       // 当用户通过第三方登录时,拿到URL中的token和access_token, 存入localstorage, 重定向至去除token信息的URL
-      if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_access_token && to.query.thirdparty_connect_refresh_token) {
-        this._store.commit(types.SET_TOKEN, to.query.thirdparty_connect_access_token);
-        this._store.commit(types.SET_REFRESH_TOKEN, to.query.thirdparty_connect_refresh_token);
+      if (this.options.allowThirdpartyLogin &&
+        query.thirdparty_connect_access_token &&
+        query.thirdparty_connect_refresh_token) {
+        this._store.commit(types.SET_TOKEN, query.thirdparty_connect_access_token);
+        this._store.commit(types.SET_REFRESH_TOKEN, query.thirdparty_connect_refresh_token);
         next({ path: to.path });
       }
 
       // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的URL
-      if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_ok) {
+      if (this.options.allowThirdpartyLogin && query.thirdparty_connect_ok) {
         next({ path: to.path });
       }
 
@@ -165,12 +188,15 @@ export default class Auth {
 
   url(relative) {
     let prefix = this.options.hamletPrefix;
+
     if (prefix.charAt(prefix.length - 1) === '/') {
       prefix = prefix.slice(0, -1);
     }
+
     if (relative.charAt(0) === '/') {
       relative = relative.slice(1);
     }
+
     return `${prefix}/${relative}`;
   }
 
@@ -178,6 +204,7 @@ export default class Auth {
     if (this._store.state.auth.user) {
       return true;
     }
+
     return false;
   }
 
@@ -186,15 +213,21 @@ export default class Auth {
     const _this = this;
     const __randNum = Math.random();
     return this._http.post(url, { username, password }, { params: { __randNum } })
-    .then((res) => {
-      if (res.body.ok) {
-        _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
-        _this._store.commit(types.SET_REFRESH_TOKEN, res.body.data.refresh_token);
-        // 登录时自动获取user信息
-        return _this.fetch();
-      }
-      return Promise.reject(res);
-    });
+      .then((res) => {
+        // console.log('login successful', res);
+        if (res.data.ok) {
+          _this._store.commit(types.SET_TOKEN, res.data.data.access_token);
+          _this._store.commit(types.SET_REFRESH_TOKEN, res.data.data.refresh_token);
+
+          // 登录时自动获取user信息
+          return _this.fetch();
+        }
+
+        return Promise.reject(res);
+      })
+      .catch((res) => {
+        console.log('login failed:', res);
+      });
   }
 
   user() {
@@ -211,14 +244,15 @@ export default class Auth {
     const __randNum = Math.random();
     return this._http.get(url, {
       before(req) { req._noauth = true; },
-      params: { __randNum }
+      params: { __randNum },
     })
     .then((res) => {
-      if (res.body.ok) {
-        _this._store.commit(types.SET_USER, res.body.data.user);
+      if (res.data.ok) {
+        _this._store.commit(types.SET_USER, res.data.data.user);
         _this._loaded = true;
         return res;
       }
+
       return Promise.reject(res);
     });
   }
@@ -243,20 +277,19 @@ export default class Auth {
     return this._http.get(url, {
       params: {
         refresh_token: _this._store.state.auth.refresh_token,
-        __randNum
-      }
-    })
-    .then(
-      (res) => {
-        if (res.body.ok) {
-          _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
-          return res;
-        }
-        return Promise.reject(res);
+        __randNum,
       },
-      (res) => {
+    })
+    .then((res) => {
+      if (res.data.ok) {
+        _this._store.commit(types.SET_TOKEN, res.data.data.access_token);
+        return res;
+      }
+
+      return Promise.reject(res);
+    }, (res) => {
         console.warn('refresh token failed,', res);
       },
     );
   }
-}
+};
