@@ -4,7 +4,6 @@
 import store from './store';
 import * as types from './store/types';
 
-
 export default class Auth {
   constructor(Vue, options = {}) {
     // check Axios, Vue-router, Vuex used
@@ -115,6 +114,7 @@ export default class Auth {
         next(this.options.notFoundRedirect);
       }
 
+      const query = to.query;
       let auth = false;
       const authRoutes = to.matched.filter(route => 'auth' in route.meta);
 
@@ -124,15 +124,15 @@ export default class Auth {
 
       // 当用户通过第三方登录时,拿到URL中的token和access_token, 存入localstorage, 重定向至去除token信息的URL
       if (this.options.allowThirdpartyLogin &&
-        to.query.thirdparty_connect_access_token &&
-        to.query.thirdparty_connect_refresh_token) {
-        this._store.commit(types.SET_TOKEN, to.query.thirdparty_connect_access_token);
-        this._store.commit(types.SET_REFRESH_TOKEN, to.query.thirdparty_connect_refresh_token);
+        query.thirdparty_connect_access_token &&
+        query.thirdparty_connect_refresh_token) {
+        this._store.commit(types.SET_TOKEN, query.thirdparty_connect_access_token);
+        this._store.commit(types.SET_REFRESH_TOKEN, query.thirdparty_connect_refresh_token);
         next({ path: to.path });
       }
 
       // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的URL
-      if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_ok) {
+      if (this.options.allowThirdpartyLogin && query.thirdparty_connect_ok) {
         next({ path: to.path });
       }
 
@@ -188,6 +188,7 @@ export default class Auth {
 
   url(relative) {
     let prefix = this.options.hamletPrefix;
+
     if (prefix.charAt(prefix.length - 1) === '/') {
       prefix = prefix.slice(0, -1);
     }
@@ -243,7 +244,7 @@ export default class Auth {
     const __randNum = Math.random();
     return this._http.get(url, {
       before(req) { req._noauth = true; },
-      params: { __randNum }
+      params: { __randNum },
     })
     .then((res) => {
       if (res.data.ok) {
@@ -276,18 +277,19 @@ export default class Auth {
     return this._http.get(url, {
       params: {
         refresh_token: _this._store.state.auth.refresh_token,
-        __randNum
-      }
+        __randNum,
+      },
     })
     .then((res) => {
       if (res.data.ok) {
         _this._store.commit(types.SET_TOKEN, res.data.data.access_token);
         return res;
       }
+
       return Promise.reject(res);
     }, (res) => {
         console.warn('refresh token failed,', res);
       },
     );
   }
-}
+};
