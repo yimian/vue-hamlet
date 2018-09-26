@@ -147,7 +147,7 @@ export default class Auth {
         // 未获得token
         if (!token) {
           // 当路由重定向到登陆页面，附带重定向的页面值
-          next({ path: this.options.authRedirect, query: { redirectedFrom: to.redirectedFrom } });
+          next({ path: this.options.authRedirect, query: { redirectedFrom: to.redirectedFrom || to.path } });
         } else {
           this.fetch().then(() => {
             const user = this.user();
