@@ -152,7 +152,7 @@ export default class Auth {
           this.fetch().then(() => {
             const user = this.user();
             if (typeof auth === 'object' && auth.constructor === Array) {
-              if (auth.indexOf(user.role) !== -1) {
+              if ((!user.role && !auth.length) || auth.indexOf(user.role) !== -1) {
                 next();
               } else {
                 next(this.options.forbiddenRedirect);
