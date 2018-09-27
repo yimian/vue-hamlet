@@ -33,7 +33,7 @@ sync(store, router);
 ~~~
 
 ## :white_check_mark: TODO
-- mod: change VueResource to axios.
+- :heavy_check_mark: mod: change VueResource to axios.
 
 ## Demo
 Run demo project with following procedures:
