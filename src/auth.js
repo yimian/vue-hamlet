@@ -296,4 +296,22 @@ export default class Auth {
         console.warn('refresh token failed,', res);
       });
   }
+
+  changePassword({ current_password, password, confirm_password }) {
+    const url = this.url('change_password');
+    const _this = this;
+    const __randNum = Math.random();
+    return this._http.post(url,
+      { current_password, password, confirm_password },
+      { params: { __randNum } },
+    )
+      .then((res) => {
+        console.log('changePassword successfully', res);
+        if (res.data.ok) {
+          return res;
+        }
+
+        return Promise.reject(res);
+      });
+  }
 }
