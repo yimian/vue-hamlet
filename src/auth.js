@@ -3,6 +3,7 @@
  */
 import store from './store';
 import * as types from './store/types';
+import consts from './consts';
 
 export default class Auth {
   constructor(Vue, options = {}) {
@@ -52,6 +53,9 @@ export default class Auth {
     };
     this.options = Object.assign({}, defaultOptions, options);
     this.options.fetchUser = this.options.fetchUser || this.url('me');
+
+    // add consts
+    this.consts = consts;
 
     // register store
     Vue.store.registerModule('auth', store);

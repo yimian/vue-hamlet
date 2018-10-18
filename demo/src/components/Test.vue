@@ -17,7 +17,7 @@
         </router-link>
       </li>
       <li>
-        <router-link :to="{ name: 'changePassword' }">
+        <router-link :to="{ name: 'ChangePassword' }">
           Test changePassword access
         </router-link>
       </li>
