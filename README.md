@@ -33,7 +33,8 @@ sync(store, router);
 ~~~
 
 ## :white_check_mark: TODO
-- :heavy_check_mark: mod: change VueResource to axios.
+- [x] mod: change `VueResource` to `axios`.
+- [ ] add: `change password` function.
 
 ## Demo
 Run demo project with following procedures:
