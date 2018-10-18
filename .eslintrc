@@ -18,6 +18,12 @@
         "ignoreRegExpLiterals": true,
         "code": 120
       }
+    ],
+    "camelcase": [
+      "error",
+      {
+        "ignoreDestructuring": true
+      }
     ]
   }
 }
