@@ -11,6 +11,11 @@
       Admin
     </router-link>
     <router-link
+      :to="{ name: 'ChangePassword' }"
+      tag="li">
+      ChangePassword
+    </router-link>
+    <router-link
       v-if="!$auth.ready()"
       :to="{ name: 'login' }"
       tag="li">

@@ -1,14 +1,25 @@
 <template>
-  <div class="admin">
+  <div class="account">
     Only admin can access
+    <ul>
+      <li>Username: {{ user.username }}</li>
+      <li>Role: {{ user.role }}</li>
+    </ul>
   </div>
 </template>
 
 <script>
 export default {
+  computed: {
+    user() {
+      return this.$auth.user();
+    },
+  },
 };
 </script>
 
-<style>
-
+<style scoped>
+.account > ul > li {
+  list-style: none;
+}
 </style>
