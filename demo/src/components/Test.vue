@@ -1,20 +1,27 @@
 <template>
   <div class="test">
-    <li>
-      <router-link :to="{ name: 'admin' }">
-        Test admin access
-      </router-link>
-    </li>
-    <li>
-      <router-link :to="{ name: 'account' }">
-        Test account access
-      </router-link>
-    </li>
-    <li>
-      <router-link :to="{ name: 'login' }">
-        Test login access
-      </router-link>
-    </li>
+    <ul>
+      <li>
+        <router-link :to="{ name: 'admin' }">
+          Test admin access
+        </router-link>
+      </li>
+      <li>
+        <router-link :to="{ name: 'account' }">
+          Test account access
+        </router-link>
+      </li>
+      <li>
+        <router-link :to="{ name: 'login' }">
+          Test login access
+        </router-link>
+      </li>
+      <li>
+        <router-link :to="{ name: 'ChangePassword' }">
+          Test changePassword access
+        </router-link>
+      </li>
+    </ul>
   </div>
 </template>
 
@@ -23,3 +30,9 @@ export default {
 
 };
 </script>
+
+<style scoped>
+.test > ul > li {
+  list-style: none;
+}
+</style>

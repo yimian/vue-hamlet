@@ -3,6 +3,7 @@
  */
 import store from './store';
 import * as types from './store/types';
+import consts from './consts';
 
 export default class Auth {
   constructor(Vue, options = {}) {
@@ -52,6 +53,9 @@ export default class Auth {
     };
     this.options = Object.assign({}, defaultOptions, options);
     this.options.fetchUser = this.options.fetchUser || this.url('me');
+
+    // add consts
+    this.consts = consts;
 
     // register store
     Vue.store.registerModule('auth', store);
@@ -294,6 +298,24 @@ export default class Auth {
         return Promise.reject(res);
       }, (res) => {
         console.warn('refresh token failed,', res);
+      });
+  }
+
+  changePassword({ current_password, password, confirm_password }) {
+    const url = this.url('change_password');
+    const _this = this;
+    const __randNum = Math.random();
+    return this._http.post(url,
+      { current_password, password, confirm_password },
+      { params: { __randNum } },
+    )
+      .then((res) => {
+        console.log('changePassword successfully', res);
+        if (res.data.ok) {
+          return res;
+        }
+
+        return Promise.reject(res);
       });
   }
 }

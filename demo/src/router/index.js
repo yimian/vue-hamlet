@@ -3,6 +3,7 @@ import Router from 'vue-router';
 import Index from '@/views/Index';
 import Admin from '@/views/admin/Admin';
 import Account from '@/views/admin/Account';
+import ChangePassword from '@/views/admin/ChangePassword';
 import Login from '@/views/auth/Login';
 
 import Forbidden from '@/components/403';
@@ -28,6 +29,14 @@ const routes = [
     path: '/account',
     name: 'account',
     component: Account,
+    meta: {
+      auth: ['admin', 'test'],
+    },
+  },
+  {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: ChangePassword,
     meta: {
       auth: ['admin', 'test'],
     },

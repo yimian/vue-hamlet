@@ -18,7 +18,7 @@ export default {
 </script>
 
 <style scoped>
-  .account > ul > li {
-    list-style: none;
-  }
+.account > ul > li {
+  list-style: none;
+}
 </style>

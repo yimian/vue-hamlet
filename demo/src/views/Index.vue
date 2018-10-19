@@ -12,5 +12,8 @@ export default {
   components: {
     Test,
   },
+  created() {
+    console.log('>>>> this:', this);
+  },
 };
 </script>
