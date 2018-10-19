@@ -34,7 +34,8 @@ sync(store, router);
 
 ## :white_check_mark: TODO
 - [x] mod: change `VueResource` to `axios`.
-- [ ] add: `change password` function.
+- [x] add: `change password` function.
+- [x] add: `consts`(constants) file.
 
 ## Demo
 Run demo project with following procedures:
@@ -68,3 +69,5 @@ Vue.use(auth, {
   appKey: '',
 });
 ~~~
+
+You can get the common error reason from `$auth.consts`.
