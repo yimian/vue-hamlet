@@ -90,11 +90,18 @@ export default class Auth {
 
     // 注册路由，实现当跳转到需要验证的url时，自动检查认证状态，如果失败，跳转到登录页面
     Vue.router.beforeEach((to, from, next) => {
+      if (to.query && to.query.tk) {
+        const token = to.query.tk;
+        localStorage.setItem('token', token);
+        this._store.commit(types.SET_TOKEN, token);
+      }
+
       // not matched route redirect to notFound route
       console.log('>>>> to: ', to);
       if (to.matched.length === 0) {
         next(this.options.notFoundRedirect);
       }
+
       let auth = false;
       const authRoutes = to.matched.filter(route => 'auth' in route.meta);
       if (authRoutes.length) {
