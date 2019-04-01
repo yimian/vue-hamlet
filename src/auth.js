@@ -109,7 +109,8 @@ export default class Auth {
       }
 
       // 当用户通过第三方登录时,拿到URL中的token和access_token, 存入localstorage, 重定向至去除token信息的URL
-      if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_access_token && to.query.thirdparty_connect_refresh_token) {
+      if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_access_token
+        && to.query.thirdparty_connect_refresh_token) {
         this._store.commit(types.SET_TOKEN, to.query.thirdparty_connect_access_token);
         this._store.commit(types.SET_REFRESH_TOKEN, to.query.thirdparty_connect_refresh_token);
         next({ path: to.path });
@@ -125,7 +126,9 @@ export default class Auth {
         // 未获得token
         if (!this._store.state.auth.token) {
           // 当路由重定向到登陆页面， 附带重定向的页面值
-          next({ path: this.options.authRedirect, query: { redirectedFrom: to.redirectedFrom || to.path } });
+          next({ path: this.options.authRedirect,
+            query: { redirectedFrom: to.redirectedFrom || to.path },
+          });
         } else {
           this.fetch().then(() => {
             const user = this.user();
@@ -193,15 +196,15 @@ export default class Auth {
     const _this = this;
     const __randNum = Math.random();
     return this._http.post(url, { username, password }, { params: { __randNum } })
-    .then((res) => {
-      if (res.body.ok) {
-        _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
-        _this._store.commit(types.SET_REFRESH_TOKEN, res.body.data.refresh_token);
-        // 登录时自动获取user信息
-        return _this.fetch();
-      }
-      return Promise.reject(res);
-    });
+      .then((res) => {
+        if (res.body.ok) {
+          _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
+          _this._store.commit(types.SET_REFRESH_TOKEN, res.body.data.refresh_token);
+          // 登录时自动获取user信息
+          return _this.fetch();
+        }
+        return Promise.reject(res);
+      });
   }
 
   user() {
@@ -218,16 +221,16 @@ export default class Auth {
     const __randNum = Math.random();
     return this._http.get(url, {
       before(req) { req._noauth = true; },
-      params: { __randNum }
+      params: { __randNum },
     })
-    .then((res) => {
-      if (res.body.ok) {
-        _this._store.commit(types.SET_USER, res.body.data.user);
-        _this._loaded = true;
-        return res;
-      }
-      return Promise.reject(res);
-    });
+      .then((res) => {
+        if (res.body.ok) {
+          _this._store.commit(types.SET_USER, res.body.data.user);
+          _this._loaded = true;
+          return res;
+        }
+        return Promise.reject(res);
+      });
   }
 
   logout() {
@@ -235,12 +238,12 @@ export default class Auth {
     const _this = this;
     const __randNum = Math.random();
     return this._http.post(url, {}, { params: { __randNum } })
-    .then(() => {
-      _this._store.commit(types.CLEAR_TOKENS);
-      _this._loaded = false;
-    }, (res) => {
-      console.warn('logout failed', res);
-    });
+      .then(() => {
+        _this._store.commit(types.CLEAR_TOKENS);
+        _this._loaded = false;
+      }, (res) => {
+        console.warn('logout failed', res);
+      });
   }
 
   refresh() {
@@ -250,20 +253,20 @@ export default class Auth {
     return this._http.get(url, {
       params: {
         refresh_token: _this._store.state.auth.refresh_token,
-        __randNum
-      }
+        __randNum,
+      },
     })
-    .then(
-      (res) => {
-        if (res.body.ok) {
-          _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
-          return res;
-        }
-        return Promise.reject(res);
-      },
-      (res) => {
-        console.warn('refresh token failed,', res);
-      },
-    );
+      .then(
+        (res) => {
+          if (res.body.ok) {
+            _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
+            return res;
+          }
+          return Promise.reject(res);
+        },
+        (res) => {
+          console.warn('refresh token failed,', res);
+        },
+      );
   }
 }
