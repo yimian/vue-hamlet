@@ -96,6 +96,12 @@ export default class Auth {
         this._store.commit(types.SET_TOKEN, token);
       }
 
+      if (to.query && to.query.rtk) {
+        const refreshToken = to.query.rtk;
+        localStorage.setItem('refresh_token', refreshToken);
+        this._store.commit(types.SET_REFRESH_TOKEN, refreshToken);
+      }
+
       // not matched route redirect to notFound route
       console.log('>>>> to: ', to);
       if (to.matched.length === 0) {
