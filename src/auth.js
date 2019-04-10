@@ -30,6 +30,7 @@ export default class Auth {
     this._router = Vue.router;
     // fetch用户信息后，变为true，开始刷新；退出时，置为false；
     this._loaded = false;
+    this.isMobileOrMiniprogram = !!navigator.userAgent.match(/mobile|miniProgram|android/i);
 
     // options
     const defaultOptions = {
@@ -162,8 +163,14 @@ export default class Auth {
           // token有效，跳转
           next();
         }).catch(() => {
+          // console.log('>>>>>>>>>清空 token', res);
+          // localStorage.setItem('hamlet-err-Object.keys-res', JSON.parse(JSON.stringify(Object.keys(res))));
+          // localStorage.setItem('hamlet-err-res-url', JSON.parse(JSON.stringify(res.url)));
           // token失效，清除token
-          this._store.commit(types.CLEAR_TOKENS);
+          // hack: 小程序、移动端这里不需要清空 token
+          if (!this.isMobileOrMiniprogram) {
+            this._store.commit(types.CLEAR_TOKENS);
+          }
           next();
         });
       } else {
