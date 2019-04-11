@@ -145,16 +145,18 @@ export default class Auth {
               } else {
                 next(this.options.forbiddenRedirect);
               }
-            } else if (auth === user.role) {
-              next();
-            } else if (auth === true) {
+            } else if (this.isMobileOrMiniprogram || auth === user.role || auth === true) {
               next();
             } else {
               next(this.options.authRedirect);
             }
           }, () => {
             // 获取用户信息失败，跳转到登录页面
-            next(this.options.authRedirect);
+            if (this.isMobileOrMiniprogram) {
+              next();
+            } else {
+              next(this.options.authRedirect);
+            }
           });
         }
       } else if (this._store.state.auth.token) {
