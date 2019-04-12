@@ -30,6 +30,8 @@ export default class Auth {
     this._router = Vue.router;
     // fetch用户信息后，变为true，开始刷新；退出时，置为false；
     this._loaded = false;
+
+    // 下面用到此变量的地方均是对小程序和移动端的特殊处理
     this.isMobileOrMiniprogram = !!navigator.userAgent.match(/mobile|miniProgram|android/i);
 
     // options
@@ -91,14 +93,15 @@ export default class Auth {
 
     // 注册路由，实现当跳转到需要验证的url时，自动检查认证状态，如果失败，跳转到登录页面
     Vue.router.beforeEach((to, from, next) => {
-      if (to.query && to.query.tk) {
-        const token = to.query.tk;
+      const query = to.query;
+      if (query && query.tk) {
+        const token = query.tk;
         localStorage.setItem('token', token);
         this._store.commit(types.SET_TOKEN, token);
       }
 
-      if (to.query && to.query.rtk) {
-        const refreshToken = to.query.rtk;
+      if (query && query.rtk) {
+        const refreshToken = query.rtk;
         localStorage.setItem('refresh_token', refreshToken);
         this._store.commit(types.SET_REFRESH_TOKEN, refreshToken);
       }
@@ -116,15 +119,15 @@ export default class Auth {
       }
 
       // 当用户通过第三方登录时,拿到URL中的token和access_token, 存入localstorage, 重定向至去除token信息的URL
-      if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_access_token
-        && to.query.thirdparty_connect_refresh_token) {
-        this._store.commit(types.SET_TOKEN, to.query.thirdparty_connect_access_token);
-        this._store.commit(types.SET_REFRESH_TOKEN, to.query.thirdparty_connect_refresh_token);
+      if (this.options.allowThirdpartyLogin && query.thirdparty_connect_access_token
+        && query.thirdparty_connect_refresh_token) {
+        this._store.commit(types.SET_TOKEN, query.thirdparty_connect_access_token);
+        this._store.commit(types.SET_REFRESH_TOKEN, query.thirdparty_connect_refresh_token);
         next({ path: to.path });
       }
 
       // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的URL
-      if (this.options.allowThirdpartyLogin && to.query.thirdparty_connect_ok) {
+      if (this.options.allowThirdpartyLogin && query.thirdparty_connect_ok) {
         next({ path: to.path });
       }
 
