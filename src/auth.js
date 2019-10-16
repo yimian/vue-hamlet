@@ -35,7 +35,7 @@ export default class Auth {
     this._store = Vue.store;
     this._router = Vue.router;
 
-    // fetch用户信息后，变为true，开始刷新；退出时，置为false；
+    // fetch 用户信息后，变为 true，开始刷新；退出时，置为 false；
     this._loaded = false;
 
     // options
@@ -66,13 +66,13 @@ export default class Auth {
       return;
     }
 
-    // 必须在register store后面执行
+    // 必须在 register store 后面执行
     this._store.commit(types.SET_APPKEY, options.appKey);
 
     // register http interceptors
     this._http.interceptors.request.use((request) => {
       // console.log('request', request);
-      // 判断是否是hamlet请求，如果是添加app_key
+      // 判断是否是 hamlet 请求，如果是添加 app_key
       if (request.url.indexOf(this.options.hamletPrefix) !== -1) {
         const appKey = this._store.state.auth.appKey;
         const method = request.method && request.method.toUpperCase();
@@ -89,7 +89,7 @@ export default class Auth {
         }
       }
 
-      // 判断是否包含token，如果有，则加到header里面
+      // 判断是否包含 token，如果有，则加到 header 里面
       const token = this._store.state.auth.token;
 
       if (token) {
@@ -114,7 +114,7 @@ export default class Auth {
       return Promise.reject(error);
     });
 
-    // 注册路由，实现当跳转到需要验证的url时，自动检查认证状态，如果失败，跳转到登录页面
+    // 注册路由，实现当跳转到需要验证的 URL 时，自动检查认证状态，如果失败，跳转到登录页面
     Vue.router.beforeEach((to, from, next) => {
       // not matched route redirect to notFound route
       console.log('>>>> to: ', to);
@@ -130,7 +130,7 @@ export default class Auth {
         auth = authRoutes[authRoutes.length - 1].meta.auth;
       }
 
-      // 当用户通过第三方登录时,拿到URL中的token和access_token, 存入localstorage, 重定向至去除token信息的URL
+      // 当用户通过第三方登录时,拿到 URL 中的 token 和 access_token, 存入 localstorage, 重定向至去除 token 信息的 URL
       if (this.options.allowThirdpartyLogin &&
         query.thirdparty_connect_access_token &&
         query.thirdparty_connect_refresh_token) {
@@ -139,7 +139,7 @@ export default class Auth {
         next({ path: to.path });
       }
 
-      // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的URL
+      // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的 URL
       if (this.options.allowThirdpartyLogin && query.thirdparty_connect_ok) {
         next({ path: to.path });
       }
@@ -148,7 +148,7 @@ export default class Auth {
 
       // 需要认证时，检查权限是否满足
       if (auth) {
-        // 未获得token
+        // 未获得 token
         if (!token) {
           // 当路由重定向到登陆页面，附带重定向的页面值
           let fullPath = to.path;
@@ -179,12 +179,12 @@ export default class Auth {
           });
         }
       } else if (token) {
-        // 不需要认证时，如果存在token，则更新一次用户信息
+        // 不需要认证时，如果存在 token，则更新一次用户信息
         this.fetch().then(() => {
-          // token有效，跳转
+          // token 有效，跳转
           next();
         }).catch(() => {
-          // token失效，清除token
+          // token 失效，清除 token
           this._store.commit(types.CLEAR_TOKENS);
           next();
         });
@@ -235,7 +235,7 @@ export default class Auth {
           _this._store.commit(types.SET_TOKEN, data.data.access_token);
           _this._store.commit(types.SET_REFRESH_TOKEN, data.data.refresh_token);
 
-          // 登录时自动获取user信息
+          // 登录时自动获取 user 信息
           return _this.fetch();
         }
 
