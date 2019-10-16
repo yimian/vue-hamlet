@@ -34,6 +34,7 @@ export default class Auth {
     this._http = instance;
     this._store = Vue.store;
     this._router = Vue.router;
+    this._$locale = Vue.$locale;
 
     // fetch 用户信息后，变为 true，开始刷新；退出时，置为 false；
     this._loaded = false;
@@ -50,6 +51,15 @@ export default class Auth {
       forbiddenRedirect: '/403',
       notFoundRedirect: '/404',
       allowThirdpartyLogin: false,
+
+      // 父级 URL，只有这里的 URL 才会通过父级 token 去获取当前应用的 token
+      parentOrigin: {},
+
+      // 获取用户在 APP 中的 token 信息
+      readAppToken: '/thirdparty/ym_app/token',
+
+      // 当前 APP 的国际化语言 key
+      langKey: 'VUE-HAMLET_LANGUAGE',
     };
     this.options = Object.assign({}, defaultOptions, options);
     this.options.fetchUser = this.options.fetchUser || this.url('me');
@@ -102,7 +112,7 @@ export default class Auth {
 
     this._http.interceptors.response.use((res) => {
       // console.log('response', res);
-      // 当发现返回码为401时，跳转到登陆页面
+      // 当发现返回码为 401 时，跳转到登陆页面
       if (res.status === 401 && (!res.config || !res.config.headers || !res.config.headers._noauth)) {
         console.debug('unauthorized, jump to login page');
         this._router.push(this.options.authRedirect);
@@ -118,12 +128,65 @@ export default class Auth {
     Vue.router.beforeEach((to, from, next) => {
       // not matched route redirect to notFound route
       console.log('>>>> to: ', to);
-      if (to.matched.length === 0) {
+      const query = to.query;
+
+      // console.log('query---', query);
+      // console.log('hamlet---document.referrer', document.referrer);
+      // console.log('hamlet---parent.location.href', parent.location.href);
+      // 嵌入到 iFrame，此时 `document.referrer` 不为空
+      const turl = document.referrer;
+      // console.log('hamlet---turl', turl);
+      if (turl) {
+        // console.log('this.options.parentOrigin--obj---', this.options.parentOrigin);
+        const keys = Object.keys(this.options.parentOrigin || {});
+        let flag = false;
+
+        for (let i = 0, len = keys.length; i < len; i += 1) {
+          const re = new RegExp(`^${this.options.parentOrigin[keys[i]]}`, 'g');
+          if (turl.match(re)) {
+            flag = true;
+            break;
+          }
+        }
+
+        if (flag) {
+          // console.log('---vue-hamlet-location', JSON.parse(JSON.stringify(location)));
+          try {
+            // 嵌入了父应用的 token、app_key，就先获取这个用户在当前 APP（如果存在）的 token 信息
+            if (query.token && query.parent_app_key) {
+              this._store.commit(types.SET_TOKEN, query.token);
+              const lang = query.lang === 'en' ? 'en' : 'zh-CN'
+              this._$locale.use(lang);
+              localStorage.setItem(this.options.langKey, lang);
+
+              return this.readAppUserToken({
+                app_key: query.parent_app_key,
+                child_app_key: this.options.appKey,
+              })
+                .then((val) => {
+                  const { data } = val.data;
+                  // console.log('>>>>>>data>>>', data);
+                  this._store.commit(types.SET_TOKEN, data.access_token);
+                  this._store.commit(types.SET_REFRESH_TOKEN, data.refresh_token);
+                  next();
+                })
+                .catch((res) => {
+                  console.log('Failed to get token', res);
+                  next(this.options.notFoundRedirect);
+                });
+            }
+          } catch (err) {
+            console.log('err', err);
+            next(this.options.notFoundRedirect);
+          }
+        }
+      }
+
+      if (!to.matched.length) {
         next(this.options.notFoundRedirect);
       }
 
       let auth = false;
-      const query = to.query;
       const authRoutes = to.matched.filter(route => 'auth' in route.meta);
 
       if (authRoutes.length) {
@@ -144,12 +207,10 @@ export default class Auth {
         next({ path: to.path });
       }
 
-      const token = this._store.state.auth.token;
-
       // 需要认证时，检查权限是否满足
       if (auth) {
         // 未获得 token
-        if (!token) {
+        if (!this._store.state.auth.token) {
           // 当路由重定向到登陆页面，附带重定向的页面值
           let fullPath = to.path;
           if (query && fullPath) {
@@ -178,7 +239,7 @@ export default class Auth {
             next(this.options.authRedirect);
           });
         }
-      } else if (token) {
+      } else if (this._store.state.auth.token) {
         // 不需要认证时，如果存在 token，则更新一次用户信息
         this.fetch().then(() => {
           // token 有效，跳转
@@ -229,7 +290,7 @@ export default class Auth {
     )
       .then((res) => {
         // console.log('login successful', res);
-        const data = res.data;
+        const { data } = res;
 
         if (data.ok) {
           _this._store.commit(types.SET_TOKEN, data.data.access_token);
@@ -310,7 +371,6 @@ export default class Auth {
 
   changePassword({ current_password, password, confirm_password }) {
     const url = this.url('change_password');
-    const _this = this;
     const __randNum = Math.random();
     return this._http.post(url,
       { current_password, password, confirm_password },
@@ -318,6 +378,23 @@ export default class Auth {
     )
       .then((res) => {
         console.log('changePassword successfully', res);
+        if (res.data.ok) {
+          return res;
+        }
+
+        return Promise.reject(res);
+      });
+  }
+
+  readAppUserToken(params) {
+    const url = this.options.readAppToken;
+    const __randNum = Math.random();
+    return this._http.post(url,
+      params,
+      { params: { __randNum } },
+    )
+      .then((res) => {
+        console.log('readAppUserToken successfully', res);
         if (res.data.ok) {
           return res;
         }
