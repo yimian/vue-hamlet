@@ -175,7 +175,9 @@ export default class Auth {
                   // console.log('>>>>>>data>>>', data);
                   this._store.commit(types.SET_TOKEN, data.access_token);
                   this._store.commit(types.SET_REFRESH_TOKEN, data.refresh_token);
-                  next();
+                  this.fetch().then(() => {
+                    next();
+                  });
                 })
                 .catch((res) => {
                   console.log('Failed to get token', res);
