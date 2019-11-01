@@ -34,7 +34,7 @@ export default class Auth {
     this._http = instance;
     this._store = Vue.store;
     this._router = Vue.router;
-    this._$locale = Vue.$locale;
+    this._$locale = Vue.$locale || Vue.prototype.$locale;
 
     // fetch 用户信息后，变为 true，开始刷新；退出时，置为 false；
     this._loaded = false;
@@ -158,9 +158,13 @@ export default class Auth {
             // 嵌入了父应用的 token、app_key，就先获取这个用户在当前 APP（如果存在）的 token 信息
             if (query.token && query.parent_app_key) {
               this._store.commit(types.SET_TOKEN, query.token);
-              const lang = query.lang === 'en' ? 'en' : 'zh-CN'
-              this._$locale.use(lang);
-              localStorage.setItem(this.options.langKey, lang);
+
+              // langKey 为空：不使用「语言切换」
+              if (this.options.langKey) {
+                const lang = query.lang === 'en' ? 'en' : 'zh-CN'
+                this._$locale.use(lang);
+                localStorage.setItem(this.options.langKey, lang);
+              }
 
               return this.readAppUserToken({
                 app_key: query.parent_app_key,
