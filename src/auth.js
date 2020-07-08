@@ -38,6 +38,9 @@ export default class Auth {
     // fetch用户信息后，变为true，开始刷新；退出时，置为false；
     this._loaded = false;
 
+    // 下面用到此变量的地方均是对小程序和移动端的特殊处理
+    this.isMobileOrMiniprogram = !!navigator.userAgent.match(/mobile|miniProgram|android/i);
+
     // options
     const defaultOptions = {
       appKey: '',
@@ -116,6 +119,19 @@ export default class Auth {
 
     // 注册路由，实现当跳转到需要验证的url时，自动检查认证状态，如果失败，跳转到登录页面
     Vue.router.beforeEach((to, from, next) => {
+      const query = to.query;
+      if (query && query.tk) {
+        const token = query.tk;
+        localStorage.setItem('token', token);
+        this._store.commit(types.SET_TOKEN, token);
+      }
+
+      if (query && query.rtk) {
+        const refreshToken = query.rtk;
+        localStorage.setItem('refresh_token', refreshToken);
+        this._store.commit(types.SET_REFRESH_TOKEN, refreshToken);
+      }
+
       // not matched route redirect to notFound route
       console.log('>>>> to: ', to);
       if (to.matched.length === 0) {
@@ -123,9 +139,7 @@ export default class Auth {
       }
 
       let auth = false;
-      const query = to.query;
       const authRoutes = to.matched.filter(route => 'auth' in route.meta);
-
       if (authRoutes.length) {
         auth = authRoutes[authRoutes.length - 1].meta.auth;
       }
@@ -168,14 +182,18 @@ export default class Auth {
               } else {
                 next(this.options.forbiddenRedirect);
               }
-            } else if (auth === user.role || auth === true) {
+            } else if (this.isMobileOrMiniprogram || auth === user.role || auth === true) {
               next();
             } else {
               next(this.options.authRedirect);
             }
           }, () => {
             // 获取用户信息失败，跳转到登录页面
-            next(this.options.authRedirect);
+            if (this.isMobileOrMiniprogram) {
+              next();
+            } else {
+              next(this.options.authRedirect);
+            }
           });
         }
       } else if (token) {
@@ -185,7 +203,10 @@ export default class Auth {
           next();
         }).catch(() => {
           // token失效，清除token
-          this._store.commit(types.CLEAR_TOKENS);
+          // hack: 小程序、移动端这里不需要清空 token
+          if (!this.isMobileOrMiniprogram) {
+            this._store.commit(types.CLEAR_TOKENS);
+          }
           next();
         });
       } else {
