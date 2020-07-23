@@ -282,7 +282,8 @@ export default class Auth {
           return Promise.reject(res);
         },
         (res) => {
-          console.warn('refresh token failed,', res);
+          console.warn('refresh token failed, will logout', res);
+          this.logout();
         },
       );
   }
