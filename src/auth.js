@@ -268,9 +268,8 @@ export default class Auth {
     const url = this.url('refresh');
     const _this = this;
     const __randNum = Math.random();
-    return this._http.get(url, {
+    return this._http.post(url, { refresh_token: _this._store.state.auth.refresh_token }, {
       params: {
-        refresh_token: _this._store.state.auth.refresh_token,
         __randNum,
       },
     })
