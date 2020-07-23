@@ -279,7 +279,7 @@ export default class Auth {
             _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
             return res;
           }
-          return Promise.reject(res);
+          this.logout();
         },
         (res) => {
           console.warn('refresh token failed, will logout', res);
