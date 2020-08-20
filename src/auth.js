@@ -74,7 +74,6 @@ export default class Auth {
 
     // register http interceptors
     this._http.interceptors.request.use((request) => {
-      // console.log('request', request);
       // 判断是否是 hamlet 请求，如果是添加 app_key
       if (request.url.indexOf(this.options.hamletPrefix) !== -1) {
         const appKey = this._store.state.auth.appKey;
@@ -104,8 +103,7 @@ export default class Auth {
     });
 
     this._http.interceptors.response.use((res) => {
-      // console.log('response', res);
-      // 当发现返回码为401时，跳转到登陆页面
+      // 当发现返回码为 401 时，跳转到登陆页面
       if (res.status === 401 && (!res.config || !res.config.headers || !res.config.headers._noauth)) {
         console.debug('unauthorized, jump to login page');
         this._router.push(this.options.authRedirect);
@@ -117,7 +115,7 @@ export default class Auth {
       return Promise.reject(error);
     });
 
-    // 记录上一次的 url, 避免在 token 失效且重定向的 url 非绝对路径时陷入无限循环
+    // 记录上一次的 URL, 避免在 token 失效且重定向的 URL 非绝对路径时陷入无限循环
     let latestUrl = null;
 
     // 注册路由，实现当跳转到需要验证的 URL 时，自动检查认证状态，如果失败，跳转到登录页面
@@ -143,7 +141,7 @@ export default class Auth {
 
       // not matched route redirect to notFound route
       console.log('>>>> to: ', to);
-      if (to.matched.length === 0) {
+      if (!to.matched.length) {
         next(this.options.notFoundRedirect);
       }
 
@@ -259,7 +257,7 @@ export default class Auth {
       { params: { __randNum } },
     )
       .then((res) => {
-        // console.log('login successful', res);
+        // console.log('login successfully', res);
         const data = res.data;
 
         if (data.ok) {
@@ -328,8 +326,9 @@ export default class Auth {
       },
     })
       .then((res) => {
-        if (res.data.ok) {
-          _this._store.commit(types.SET_TOKEN, res.data.data.access_token);
+        const { data } = res;
+        if (data.ok) {
+          _this._store.commit(types.SET_TOKEN, data.data.access_token);
           return res;
         }
 
