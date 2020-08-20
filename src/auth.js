@@ -91,8 +91,17 @@ export default class Auth {
       });
     });
 
-    // 注册路由，实现当跳转到需要验证的url时，自动检查认证状态，如果失败，跳转到登录页面
+    // 记录上一次的 url, 避免在 token 失效且重定向的 url 非绝对路径时陷入无限循环
+    let latestUrl = null;
+
+    // 注册路由，实现当跳转到需要验证的 url 时，自动检查认证状态，如果失败，跳转到登录页面
     Vue.router.beforeEach((to, from, next) => {
+      if (latestUrl && latestUrl === to.path) {
+        next();
+      } else {
+        latestUrl = to.path;
+      }
+
       const query = to.query;
       if (query && query.tk) {
         const token = query.tk;
