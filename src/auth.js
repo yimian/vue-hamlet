@@ -6,7 +6,7 @@ import * as types from './store/types';
 import consts from './consts';
 
 export default class Auth {
-  constructor(Vue, options = {}) {
+  constructor(Vue, opts = {}) {
     // check Axios, Vue-router, Vuex used
     if (!Vue.$http && !Vue.prototype.$http) {
       console.error('Axios must be set first');
@@ -27,7 +27,7 @@ export default class Auth {
     this._Vue = Vue;
     const instance = (Vue.$http || Vue.prototype.$http).create({
       headers: {
-        'content-type': options.contentType || 'application/json;charset=utf-8',
+        'content-type': opts.contentType || 'application/json;charset=utf-8',
       },
     });
 
@@ -43,6 +43,7 @@ export default class Auth {
 
     // options
     const defaultOptions = {
+      absPath: true,
       appKey: '',
       authType: 'Bearer',
       hamletPrefix: '/api/auth',
@@ -54,8 +55,12 @@ export default class Auth {
       notFoundRedirect: '/404',
       allowThirdpartyLogin: false,
     };
-    this.options = Object.assign({}, defaultOptions, options);
-    this.options.fetchUser = this.options.fetchUser || this.url('me');
+    this.options = Object.assign({}, defaultOptions, opts);
+    if (!this.options.fetchUser) {
+      this.options.fetchUser = this.url('me');
+    }
+
+    const { options } = this;
 
     // add consts
     this.consts = consts;
@@ -64,8 +69,15 @@ export default class Auth {
     Vue.store.registerModule('auth', store);
 
     // app key
-    if (!this.options.appKey) {
+    if (!options.appKey) {
       console.error('must set app key first');
+      return;
+    }
+
+    // authRedirect: 这里应该使用绝对路径，否则特殊情况会陷入无限循环
+    // 可以使用 opts.absPath = false 来避免此限制
+    if (absPath && options.authRedirect && options.authRedirect[0] !== '/') {
+      console.error('The `authRedirect` option needs to be an absolute path');
       return;
     }
 
@@ -75,7 +87,7 @@ export default class Auth {
     // register http interceptors
     this._http.interceptors.request.use((request) => {
       // 判断是否是 hamlet 请求，如果是添加 app_key
-      if (request.url.indexOf(this.options.hamletPrefix) !== -1) {
+      if (request.url.indexOf(options.hamletPrefix) !== -1) {
         const appKey = this._store.state.auth.appKey;
         const method = request.method && request.method.toUpperCase();
         if (['POST', 'PUT'].indexOf(method) !== -1) {
@@ -95,8 +107,8 @@ export default class Auth {
       const token = this._store.state.auth.token;
 
       if (token) {
-        request.headers.Authorization = `${this.options.authType} ${token}`;
-        // this._http.defaults.headers.common['Authorization'] = `${this.options.authType} ${token}`;
+        request.headers.Authorization = `${options.authType} ${token}`;
+        // this._http.defaults.headers.common['Authorization'] = `${options.authType} ${token}`;
       }
 
       return request;
@@ -106,7 +118,7 @@ export default class Auth {
       // 当发现返回码为 401 时，跳转到登陆页面
       if (res.status === 401 && (!res.config || !res.config.headers || !res.config.headers._noauth)) {
         console.debug('unauthorized, jump to login page');
-        this._router.push(this.options.authRedirect);
+        this._router.push(options.authRedirect);
       }
 
       return Promise.resolve(res);
@@ -142,7 +154,7 @@ export default class Auth {
       // not matched route redirect to notFound route
       console.log('>>>> to: ', to);
       if (!to.matched.length) {
-        next(this.options.notFoundRedirect);
+        next(options.notFoundRedirect);
       }
 
       let auth = false;
@@ -152,7 +164,7 @@ export default class Auth {
       }
 
       // 当用户通过第三方登录时,拿到 URL 中的 token 和 access_token, 存入 localstorage, 重定向至去除 token 信息的 URL
-      if (this.options.allowThirdpartyLogin &&
+      if (options.allowThirdpartyLogin &&
         query.thirdparty_connect_access_token &&
         query.thirdparty_connect_refresh_token) {
         this._store.commit(types.SET_TOKEN, query.thirdparty_connect_access_token);
@@ -161,7 +173,7 @@ export default class Auth {
       }
 
       // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的 URL
-      if (this.options.allowThirdpartyLogin && query.thirdparty_connect_ok) {
+      if (options.allowThirdpartyLogin && query.thirdparty_connect_ok) {
         next({ path: to.path });
       }
 
@@ -179,7 +191,7 @@ export default class Auth {
               fullPath = `${fullPath}${i === 0 ? '?' : '&'}${keys[i]}=${query[keys[i]]}`;
             }
           }
-          next({ path: this.options.authRedirect, query: { redirectedFrom: to.redirectedFrom || fullPath } });
+          next({ path: options.authRedirect, query: { redirectedFrom: to.redirectedFrom || fullPath } });
         } else {
           this.fetch().then(() => {
             const user = this.user();
@@ -187,19 +199,19 @@ export default class Auth {
               if ((!user.role && !auth.length) || auth.indexOf(user.role) !== -1) {
                 next();
               } else {
-                next(this.options.forbiddenRedirect);
+                next(options.forbiddenRedirect);
               }
             } else if (this.isMobileOrMiniprogram || auth === user.role || auth === true) {
               next();
             } else {
-              next(this.options.authRedirect);
+              next(options.authRedirect);
             }
           }, () => {
             // 获取用户信息失败，跳转到登录页面
             if (this.isMobileOrMiniprogram) {
               next();
             } else {
-              next(this.options.authRedirect);
+              next(options.authRedirect);
             }
           });
         }
@@ -227,7 +239,7 @@ export default class Auth {
       if (this._loaded) {
         this.refresh();
       }
-    }, this.options.refreshInterval * 60 * 1000);
+    }, options.refreshInterval * 60 * 1000);
   }
 
   url(relative) {
