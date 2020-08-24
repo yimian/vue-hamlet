@@ -23,23 +23,14 @@ export default class Auth {
       return;
     }
 
+    // app key
+    if (!opts.appKey) {
+      console.error('must set app key first');
+      return;
+    }
+
     // set variables;
     this._Vue = Vue;
-    const instance = (Vue.$http || Vue.prototype.$http).create({
-      headers: {
-        'content-type': opts.contentType || 'application/json;charset=utf-8',
-      },
-    });
-
-    this._http = instance;
-    this._store = Vue.store;
-    this._router = Vue.router;
-
-    // fetch 用户信息后，变为 true，开始刷新；退出时，置为 false；
-    this._loaded = false;
-
-    // 下面用到此变量的地方均是对小程序和移动端的特殊处理
-    this.isMobileOrMiniprogram = !!navigator.userAgent.match(/mobile|miniProgram|android/i);
 
     // options
     const defaultOptions = {
@@ -61,18 +52,11 @@ export default class Auth {
     }
 
     const { options } = this;
-
-    // add consts
-    this.consts = consts;
-
-    // register store
-    Vue.store.registerModule('auth', store);
-
-    // app key
-    if (!options.appKey) {
-      console.error('must set app key first');
-      return;
-    }
+    const instance = (Vue.$http || Vue.prototype.$http).create({
+      headers: {
+        'content-type': options.contentType || 'application/json;charset=utf-8',
+      },
+    });
 
     // authRedirect: 这里应该使用绝对路径，否则特殊情况会陷入无限循环
     // 可以使用 opts.absPath = false 来避免此限制
@@ -80,6 +64,22 @@ export default class Auth {
       console.error('The `authRedirect` option needs to be an absolute path');
       return;
     }
+
+    this._http = instance;
+    this._store = Vue.store;
+    this._router = Vue.router;
+
+    // fetch 用户信息后，变为 true，开始刷新；退出时，置为 false；
+    this._loaded = false;
+
+    // 下面用到此变量的地方均是对小程序和移动端的特殊处理
+    this.isMobileOrMiniprogram = !!navigator.userAgent.match(/mobile|miniProgram|android/i);
+
+    // add consts
+    this.consts = consts;
+
+    // register store
+    Vue.store.registerModule('auth', store);
 
     // 必须在 register store 后面执行
     this._store.commit(types.SET_APPKEY, options.appKey);
