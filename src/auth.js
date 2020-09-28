@@ -277,7 +277,12 @@ export default class Auth {
           _this._store.commit(types.SET_REFRESH_TOKEN, data.data.refresh_token);
 
           // 登录时自动获取 user 信息
-          return _this.fetch();
+          // return _this.fetch();
+          const promptBindWechat = res.body.data.prompt_bind_wechat || false;
+          return _this.fetch().then((val) => {
+            val.body['prompt_bind_wechat'] = promptBindWechat;
+            return val;
+          });
         }
 
         return Promise.reject(res);
