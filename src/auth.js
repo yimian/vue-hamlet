@@ -60,7 +60,7 @@ export default class Auth {
 
     // authRedirect: 这里应该使用绝对路径，否则特殊情况会陷入无限循环
     // 可以使用 opts.absPath = false 来避免此限制
-    if (absPath && options.authRedirect && options.authRedirect[0] !== '/') {
+    if (options.absPath && options.authRedirect && options.authRedirect[0] !== '/') {
       console.error('The `authRedirect` option needs to be an absolute path');
       return;
     }
