@@ -269,20 +269,25 @@ export default class Auth {
       { params: { __randNum } },
     )
       .then((res) => {
-        // console.log('login successfully', res);
-        const data = res.data;
+        // console.log('\n\n>>>login successfully>>>\n\n', res);
+        const data = res.data.data;
 
-        if (data.ok) {
-          _this._store.commit(types.SET_TOKEN, data.data.access_token);
-          _this._store.commit(types.SET_REFRESH_TOKEN, data.data.refresh_token);
+        if (res.data.ok) {
+          // 强制微信绑定的应用只返回 `auth_key`
+          if (data.auth_key) {
+            return res;
+          }
 
-          // 登录时自动获取 user 信息
-          // return _this.fetch();
-          const promptBindWechat = res.body.data.prompt_bind_wechat || false;
-          return _this.fetch().then((val) => {
-            val.body['prompt_bind_wechat'] = promptBindWechat;
-            return val;
-          });
+          _this._store.commit(types.SET_TOKEN, data.access_token);
+          _this._store.commit(types.SET_REFRESH_TOKEN, data.refresh_token);
+
+          // 提示微信绑定
+          if (data.prompt_bind_wechat) {
+            return res;
+          }
+
+          // 正常登录时自动获取 user 信息
+          return _this.fetch();
         }
 
         return Promise.reject(res);
