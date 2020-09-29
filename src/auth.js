@@ -224,16 +224,21 @@ export default class Auth {
     const __randNum = Math.random();
     return this._http.post(url, { username, password }, { params: { __randNum } })
       .then((res) => {
+        const data = res.body.data;
         if (res.body.ok) {
-          _this._store.commit(types.SET_TOKEN, res.body.data.access_token);
-          _this._store.commit(types.SET_REFRESH_TOKEN, res.body.data.refresh_token);
-          // 登录时自动获取user信息
-          // return _this.fetch();
-          const promptBindWechat = res.body.data.prompt_bind_wechat;
-          return _this.fetch().then((val) => {
-            val.body['prompt_bind_wechat'] = promptBindWechat;
-            return val;
-          });
+          // 强制微信绑定后只返回 `auth_key`
+          if (data.auth_key) {
+            return res;
+          }
+
+          _this._store.commit(types.SET_TOKEN, data.access_token);
+          _this._store.commit(types.SET_REFRESH_TOKEN, data.refresh_token);
+          if (data.prompt_bind_wechat) {
+            return res;
+          }
+
+          // 正常登录时自动获取 user 信息
+          return _this.fetch();
         }
         return Promise.reject(res);
       });
