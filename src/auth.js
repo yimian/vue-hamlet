@@ -6,7 +6,7 @@ import * as types from './store/types';
 import consts from './consts';
 
 export default class Auth {
-  constructor(Vue, options = {}) {
+  constructor(Vue, opts = {}) {
     // check Axios, Vue-router, Vuex used
     if (!Vue.$http && !Vue.prototype.$http) {
       console.error('Axios must be set first');
@@ -23,23 +23,18 @@ export default class Auth {
       return;
     }
 
+    // app key
+    if (!opts.appKey) {
+      console.error('must set app key first');
+      return;
+    }
+
     // set variables;
     this._Vue = Vue;
-    const instance = (Vue.$http || Vue.prototype.$http).create({
-      headers: {
-        'content-type': options.contentType || 'application/json;charset=utf-8',
-      },
-    });
-
-    this._http = instance;
-    this._store = Vue.store;
-    this._router = Vue.router;
-
-    // fetch用户信息后，变为true，开始刷新；退出时，置为false；
-    this._loaded = false;
 
     // options
     const defaultOptions = {
+      absPath: true,
       appKey: '',
       authType: 'Bearer',
       hamletPrefix: '/api/auth',
@@ -51,8 +46,34 @@ export default class Auth {
       notFoundRedirect: '/404',
       allowThirdpartyLogin: false,
     };
-    this.options = Object.assign({}, defaultOptions, options);
-    this.options.fetchUser = this.options.fetchUser || this.url('me');
+    this.options = Object.assign({}, defaultOptions, opts);
+    if (!this.options.fetchUser) {
+      this.options.fetchUser = this.url('me');
+    }
+
+    const { options } = this;
+    const instance = (Vue.$http || Vue.prototype.$http).create({
+      headers: {
+        'content-type': options.contentType || 'application/json;charset=utf-8',
+      },
+    });
+
+    // authRedirect: 这里应该使用绝对路径，否则特殊情况会陷入无限循环
+    // 可以使用 opts.absPath = false 来避免此限制
+    if (options.absPath && options.authRedirect && options.authRedirect[0] !== '/') {
+      console.error('The `authRedirect` option needs to be an absolute path');
+      return;
+    }
+
+    this._http = instance;
+    this._store = Vue.store;
+    this._router = Vue.router;
+
+    // fetch 用户信息后，变为 true，开始刷新；退出时，置为 false；
+    this._loaded = false;
+
+    // 下面用到此变量的地方均是对小程序和移动端的特殊处理
+    this.isMobileOrMiniprogram = !!navigator.userAgent.match(/mobile|miniProgram|android/i);
 
     // add consts
     this.consts = consts;
@@ -60,20 +81,13 @@ export default class Auth {
     // register store
     Vue.store.registerModule('auth', store);
 
-    // app key
-    if (!this.options.appKey) {
-      console.error('must set app key first');
-      return;
-    }
-
-    // 必须在register store后面执行
+    // 必须在 register store 后面执行
     this._store.commit(types.SET_APPKEY, options.appKey);
 
     // register http interceptors
     this._http.interceptors.request.use((request) => {
-      // console.log('request', request);
-      // 判断是否是hamlet请求，如果是添加app_key
-      if (request.url.indexOf(this.options.hamletPrefix) !== -1) {
+      // 判断是否是 hamlet 请求，如果是添加 app_key
+      if (request.url.indexOf(options.hamletPrefix) !== -1) {
         const appKey = this._store.state.auth.appKey;
         const method = request.method && request.method.toUpperCase();
         if (['POST', 'PUT'].indexOf(method) !== -1) {
@@ -89,23 +103,22 @@ export default class Auth {
         }
       }
 
-      // 判断是否包含token，如果有，则加到header里面
+      // 判断是否包含 token，如果有，则加到 header 里面
       const token = this._store.state.auth.token;
 
       if (token) {
-        request.headers.Authorization = `${this.options.authType} ${token}`;
-        // this._http.defaults.headers.common['Authorization'] = `${this.options.authType} ${token}`;
+        request.headers.Authorization = `${options.authType} ${token}`;
+        // this._http.defaults.headers.common['Authorization'] = `${options.authType} ${token}`;
       }
 
       return request;
     });
 
     this._http.interceptors.response.use((res) => {
-      // console.log('response', res);
-      // 当发现返回码为401时，跳转到登陆页面
+      // 当发现返回码为 401 时，跳转到登陆页面
       if (res.status === 401 && (!res.config || !res.config.headers || !res.config.headers._noauth)) {
         console.debug('unauthorized, jump to login page');
-        this._router.push(this.options.authRedirect);
+        this._router.push(options.authRedirect);
       }
 
       return Promise.resolve(res);
@@ -114,24 +127,44 @@ export default class Auth {
       return Promise.reject(error);
     });
 
-    // 注册路由，实现当跳转到需要验证的url时，自动检查认证状态，如果失败，跳转到登录页面
+    // 记录上一次的 URL, 避免在 token 失效且重定向的 URL 非绝对路径时陷入无限循环
+    let latestUrl = null;
+
+    // 注册路由，实现当跳转到需要验证的 URL 时，自动检查认证状态，如果失败，跳转到登录页面
     Vue.router.beforeEach((to, from, next) => {
+      if (latestUrl && latestUrl === to.path) {
+        next();
+      } else {
+        latestUrl = to.path;
+      }
+
+      const query = to.query;
+      if (query && query.tk) {
+        const token = query.tk;
+        localStorage.setItem('token', token);
+        this._store.commit(types.SET_TOKEN, token);
+      }
+
+      if (query && query.rtk) {
+        const refreshToken = query.rtk;
+        localStorage.setItem('refresh_token', refreshToken);
+        this._store.commit(types.SET_REFRESH_TOKEN, refreshToken);
+      }
+
       // not matched route redirect to notFound route
       console.log('>>>> to: ', to);
-      if (to.matched.length === 0) {
-        next(this.options.notFoundRedirect);
+      if (!to.matched.length) {
+        next(options.notFoundRedirect);
       }
 
       let auth = false;
-      const query = to.query;
       const authRoutes = to.matched.filter(route => 'auth' in route.meta);
-
       if (authRoutes.length) {
         auth = authRoutes[authRoutes.length - 1].meta.auth;
       }
 
-      // 当用户通过第三方登录时,拿到URL中的token和access_token, 存入localstorage, 重定向至去除token信息的URL
-      if (this.options.allowThirdpartyLogin &&
+      // 当用户通过第三方登录时,拿到 URL 中的 token 和 access_token, 存入 localstorage, 重定向至去除 token 信息的 URL
+      if (options.allowThirdpartyLogin &&
         query.thirdparty_connect_access_token &&
         query.thirdparty_connect_refresh_token) {
         this._store.commit(types.SET_TOKEN, query.thirdparty_connect_access_token);
@@ -139,8 +172,8 @@ export default class Auth {
         next({ path: to.path });
       }
 
-      // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的URL
-      if (this.options.allowThirdpartyLogin && query.thirdparty_connect_ok) {
+      // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的 URL
+      if (options.allowThirdpartyLogin && query.thirdparty_connect_ok) {
         next({ path: to.path });
       }
 
@@ -148,10 +181,17 @@ export default class Auth {
 
       // 需要认证时，检查权限是否满足
       if (auth) {
-        // 未获得token
+        // 未获得 token
         if (!token) {
           // 当路由重定向到登陆页面，附带重定向的页面值
-          next({ path: this.options.authRedirect, query: { redirectedFrom: to.redirectedFrom || to.path } });
+          let fullPath = to.path;
+          if (query && fullPath) {
+            const keys = Object.keys(query);
+            for (let i = 0, len = keys.length; i < len; i += 1) {
+              fullPath = `${fullPath}${i === 0 ? '?' : '&'}${keys[i]}=${query[keys[i]]}`;
+            }
+          }
+          next({ path: options.authRedirect, query: { redirectedFrom: to.redirectedFrom || fullPath } });
         } else {
           this.fetch().then(() => {
             const user = this.user();
@@ -159,26 +199,34 @@ export default class Auth {
               if ((!user.role && !auth.length) || auth.indexOf(user.role) !== -1) {
                 next();
               } else {
-                next(this.options.forbiddenRedirect);
+                next(options.forbiddenRedirect);
               }
-            } else if (auth === user.role || auth === true) {
+            } else if (this.isMobileOrMiniprogram || auth === user.role || auth === true) {
               next();
             } else {
-              next(this.options.authRedirect);
+              next(options.authRedirect);
             }
           }, () => {
             // 获取用户信息失败，跳转到登录页面
-            next(this.options.authRedirect);
+            if (this.isMobileOrMiniprogram) {
+              next();
+            } else {
+              next(options.authRedirect);
+            }
           });
         }
       } else if (token) {
-        // 不需要认证时，如果存在token，则更新一次用户信息
+        // 不需要认证时，如果存在 token，则更新一次用户信息
         this.fetch().then(() => {
-          // token有效，跳转
+          // token 有效，跳转
           next();
         }).catch(() => {
-          // token失效，清除token
-          this._store.commit(types.CLEAR_TOKENS);
+          // token 失效，清除 token
+          // hack: 小程序、移动端这里不需要清空 token
+          if (!this.isMobileOrMiniprogram) {
+            this._store.commit(types.CLEAR_TOKENS);
+          }
+
           next();
         });
       } else {
@@ -191,7 +239,7 @@ export default class Auth {
       if (this._loaded) {
         this.refresh();
       }
-    }, this.options.refreshInterval * 60 * 1000);
+    }, options.refreshInterval * 60 * 1000);
   }
 
   url(relative) {
@@ -221,15 +269,20 @@ export default class Auth {
       { params: { __randNum } },
     )
       .then((res) => {
-        // console.log('login successful', res);
+        // console.log('login successfully', res);
         const data = res.data;
 
         if (data.ok) {
           _this._store.commit(types.SET_TOKEN, data.data.access_token);
           _this._store.commit(types.SET_REFRESH_TOKEN, data.data.refresh_token);
 
-          // 登录时自动获取user信息
-          return _this.fetch();
+          // 登录时自动获取 user 信息
+          // return _this.fetch();
+          const promptBindWechat = res.body.data.prompt_bind_wechat || false;
+          return _this.fetch().then((val) => {
+            val.body['prompt_bind_wechat'] = promptBindWechat;
+            return val;
+          });
         }
 
         return Promise.reject(res);
@@ -290,8 +343,9 @@ export default class Auth {
       },
     })
       .then((res) => {
-        if (res.data.ok) {
-          _this._store.commit(types.SET_TOKEN, res.data.data.access_token);
+        const { data } = res;
+        if (data.ok) {
+          _this._store.commit(types.SET_TOKEN, data.data.access_token);
           return res;
         }
 
