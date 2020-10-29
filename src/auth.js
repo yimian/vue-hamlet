@@ -80,6 +80,7 @@ export default class Auth {
     this._http = instance;
     this._store = Vue.store;
     this._router = Vue.router;
+    this._$locale = Vue.$locale || Vue.prototype.$locale;
 
     // fetch 用户信息后，变为 true，开始刷新；退出时，置为 false；
     this._loaded = false;
