@@ -167,9 +167,9 @@ export default class Auth {
       console.log('>>>> to: ', to);
       // 嵌入到 iFrame，此时 `document.referrer` 不为空
       const turl = document.referrer;
-      // console.log('hamlet---turl', turl);
+      console.log('hamlet---turl', turl);
       if (turl) {
-        // console.log('this.options.parentOrigin--obj---', this.options.parentOrigin);
+        console.log('this.options.parentOrigin--obj---', this.options.parentOrigin);
         const keys = Object.keys(options.parentOrigin || {});
         let flag = false;
 
@@ -181,15 +181,16 @@ export default class Auth {
           }
         }
 
+        console.log('>>>>>>flag>>>>>>>', flag);
         if (flag) {
-          // console.log('---vue-hamlet-location', JSON.parse(JSON.stringify(location)));
+          console.log('---vue-hamlet-location', JSON.parse(JSON.stringify(location)));
           try {
             // 嵌入了父应用的 token、app_key，就先获取这个用户在当前 APP（如果存在）的 token 信息
             if (query.token && query.parent_app_key) {
               this._store.commit(types.SET_TOKEN, query.token);
 
               // langKey 为空：不使用「语言切换」
-              if (this.options.langKey) {
+              if (options.langKey) {
                 const lang = query.lang === 'en' ? 'en' : 'zh-CN'
                 this._$locale.use(lang);
                 localStorage.setItem(options.langKey, lang);
@@ -382,6 +383,7 @@ export default class Auth {
   }
 
   checkAuth(to, query, next) {
+    const { options } = this;
     if (!to.matched.length) {
       next(options.notFoundRedirect);
     }
