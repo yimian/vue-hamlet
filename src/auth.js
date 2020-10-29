@@ -186,6 +186,9 @@ export default class Auth {
           console.log('---vue-hamlet-location', JSON.parse(JSON.stringify(location)));
           try {
             // 嵌入了父应用的 token、app_key，就先获取这个用户在当前 APP（如果存在）的 token 信息
+            console.log('>>>>>>query>>>>>', query);
+            console.log('>>>>>>query.token>>>>>', query.token);
+            console.log('>>>>>>query.parent_app_key>>>>>', query.parent_app_key);
             if (query.token && query.parent_app_key) {
               this._store.commit(types.SET_TOKEN, query.token);
 
@@ -366,6 +369,7 @@ export default class Auth {
   }
 
   readAppUserToken(params) {
+    console.log('>>>>>start>>>>>readAppUserToken');
     const url = this.options.readAppToken;
     const __randNum = Math.random();
     return this._http.post(url,
@@ -379,6 +383,10 @@ export default class Auth {
         }
 
         return Promise.reject(res);
+      })
+      .catch((err) => {
+        console.log('>>>>>readAppUserToken failed>>>>>>', err);
+        return Promise.reject(err);
       });
   }
 
