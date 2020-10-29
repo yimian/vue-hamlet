@@ -45,6 +45,18 @@ export default class Auth {
       forbiddenRedirect: '/403',
       notFoundRedirect: '/404',
       allowThirdpartyLogin: false,
+
+      // 获取当前用户在当前 APP 中的 token 信息
+      readAppToken: '/thirdparty/ym_app/token',
+
+      //  父应用 URL，只有 parentOrigin 包含的 URL 才会通过父应用的 token 去获取当前应用的 token
+      parentOrigin: {
+        oneview: 'https://oneview.yimian.com.cn',
+        'oneview-test': 'http://oneview.test.yimian.com.cn',
+      },
+
+      // 当前应用语言国际化时存储在 localStorage 里的 key
+      langKey: 'VUE-HAMLET_LANGUAGE',
     };
     this.options = Object.assign({}, defaultOptions, opts);
     if (!this.options.fetchUser) {
@@ -153,85 +165,59 @@ export default class Auth {
 
       // not matched route redirect to notFound route
       console.log('>>>> to: ', to);
-      if (!to.matched.length) {
-        next(options.notFoundRedirect);
-      }
+      // 嵌入到 iFrame，此时 `document.referrer` 不为空
+      const turl = document.referrer;
+      // console.log('hamlet---turl', turl);
+      if (turl) {
+        // console.log('this.options.parentOrigin--obj---', this.options.parentOrigin);
+        const keys = Object.keys(options.parentOrigin || {});
+        let flag = false;
 
-      let auth = false;
-      const authRoutes = to.matched.filter(route => 'auth' in route.meta);
-      if (authRoutes.length) {
-        auth = authRoutes[authRoutes.length - 1].meta.auth;
-      }
-
-      // 当用户通过第三方登录时,拿到 URL 中的 token 和 access_token, 存入 localstorage, 重定向至去除 token 信息的 URL
-      if (options.allowThirdpartyLogin &&
-        query.thirdparty_connect_access_token &&
-        query.thirdparty_connect_refresh_token) {
-        this._store.commit(types.SET_TOKEN, query.thirdparty_connect_access_token);
-        this._store.commit(types.SET_REFRESH_TOKEN, query.thirdparty_connect_refresh_token);
-        next({ path: to.path });
-      }
-
-      // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的 URL
-      if (options.allowThirdpartyLogin && query.thirdparty_connect_ok) {
-        next({ path: to.path });
-      }
-
-      const token = this._store.state.auth.token;
-
-      // 需要认证时，检查权限是否满足
-      if (auth) {
-        // 未获得 token
-        if (!token) {
-          // 当路由重定向到登陆页面，附带重定向的页面值
-          let fullPath = to.path;
-          if (query && fullPath) {
-            const keys = Object.keys(query);
-            for (let i = 0, len = keys.length; i < len; i += 1) {
-              fullPath = `${fullPath}${i === 0 ? '?' : '&'}${keys[i]}=${query[keys[i]]}`;
-            }
+        for (let i = 0, len = keys.length; i < len; i += 1) {
+          const re = new RegExp(`^${options.parentOrigin[keys[i]]}`, 'g');
+          if (turl.match(re)) {
+            flag = true;
+            break;
           }
-          next({ path: options.authRedirect, query: { redirectedFrom: to.redirectedFrom || fullPath } });
-        } else {
-          this.fetch().then(() => {
-            const user = this.user();
-            if (typeof auth === 'object' && auth.constructor === Array) {
-              if ((!user.role && !auth.length) || auth.indexOf(user.role) !== -1) {
-                next();
-              } else {
-                next(options.forbiddenRedirect);
-              }
-            } else if (this.isMobileOrMiniprogram || auth === user.role || auth === true) {
-              next();
-            } else {
-              next(options.authRedirect);
-            }
-          }, () => {
-            // 获取用户信息失败，跳转到登录页面
-            if (this.isMobileOrMiniprogram) {
-              next();
-            } else {
-              next(options.authRedirect);
-            }
-          });
         }
-      } else if (token) {
-        // 不需要认证时，如果存在 token，则更新一次用户信息
-        this.fetch().then(() => {
-          // token 有效，跳转
-          next();
-        }).catch(() => {
-          // token 失效，清除 token
-          // hack: 小程序、移动端这里不需要清空 token
-          if (!this.isMobileOrMiniprogram) {
-            this._store.commit(types.CLEAR_TOKENS);
-          }
 
-          next();
-        });
-      } else {
-        next();
+        if (flag) {
+          // console.log('---vue-hamlet-location', JSON.parse(JSON.stringify(location)));
+          try {
+            // 嵌入了父应用的 token、app_key，就先获取这个用户在当前 APP（如果存在）的 token 信息
+            if (query.token && query.parent_app_key) {
+              this._store.commit(types.SET_TOKEN, query.token);
+
+              // langKey 为空：不使用「语言切换」
+              if (this.options.langKey) {
+                const lang = query.lang === 'en' ? 'en' : 'zh-CN'
+                this._$locale.use(lang);
+                localStorage.setItem(options.langKey, lang);
+              }
+
+              return this.readAppUserToken({
+                app_key: query.parent_app_key,
+                child_app_key: options.appKey,
+              })
+                .then((val) => {
+                  const { data } = val.data;
+                  this._store.commit(types.SET_TOKEN, data.access_token);
+                  this._store.commit(types.SET_REFRESH_TOKEN, data.refresh_token);
+                  this.checkAuth(to, query, next);
+                })
+                .catch((res) => {
+                  console.log('Failed to get token', res);
+                  next(options.notFoundRedirect);
+                });
+            }
+          } catch (err) {
+            console.log('err', err);
+            next(options.notFoundRedirect);
+          }
+        }
       }
+
+      this.checkAuth(to, query, next);
     });
 
     // refresh
@@ -376,5 +362,104 @@ export default class Auth {
 
         return Promise.reject(res);
       });
+  }
+
+  readAppUserToken(params) {
+    const url = this.options.readAppToken;
+    const __randNum = Math.random();
+    return this._http.post(url,
+      params,
+      { params: { __randNum } },
+    )
+      .then((res) => {
+        console.log('readAppUserToken successfully', res);
+        if (res.data.ok) {
+          return res;
+        }
+
+        return Promise.reject(res);
+      });
+  }
+
+  checkAuth(to, query, next) {
+    if (!to.matched.length) {
+      next(options.notFoundRedirect);
+    }
+
+    let auth = false;
+    const authRoutes = to.matched.filter(route => 'auth' in route.meta);
+    if (authRoutes.length) {
+      auth = authRoutes[authRoutes.length - 1].meta.auth;
+    }
+
+    // 当用户通过第三方登录时,拿到 URL 中的 token 和 access_token, 存入 localstorage, 重定向至去除 token 信息的 URL
+    if (options.allowThirdpartyLogin &&
+      query.thirdparty_connect_access_token &&
+      query.thirdparty_connect_refresh_token) {
+      this._store.commit(types.SET_TOKEN, query.thirdparty_connect_access_token);
+      this._store.commit(types.SET_REFRESH_TOKEN, query.thirdparty_connect_refresh_token);
+      next({ path: to.path });
+    }
+
+    // 当用户绑定第三方账号时, 重定向至去除绑定成功信息的 URL
+    if (options.allowThirdpartyLogin && query.thirdparty_connect_ok) {
+      next({ path: to.path });
+    }
+
+    const token = this._store.state.auth.token;
+
+    // 需要认证时，检查权限是否满足
+    if (auth) {
+      // 未获得 token
+      if (!token) {
+        // 当路由重定向到登陆页面，附带重定向的页面值
+        let fullPath = to.path;
+        if (query && fullPath) {
+          const keys = Object.keys(query);
+          for (let i = 0, len = keys.length; i < len; i += 1) {
+            fullPath = `${fullPath}${i === 0 ? '?' : '&'}${keys[i]}=${query[keys[i]]}`;
+          }
+        }
+        next({ path: options.authRedirect, query: { redirectedFrom: to.redirectedFrom || fullPath } });
+      } else {
+        this.fetch().then(() => {
+          const user = this.user();
+          if (typeof auth === 'object' && auth.constructor === Array) {
+            if ((!user.role && !auth.length) || auth.indexOf(user.role) !== -1) {
+              next();
+            } else {
+              next(options.forbiddenRedirect);
+            }
+          } else if (this.isMobileOrMiniprogram || auth === user.role || auth === true) {
+            next();
+          } else {
+            next(options.authRedirect);
+          }
+        }, () => {
+          // 获取用户信息失败，跳转到登录页面
+          if (this.isMobileOrMiniprogram) {
+            next();
+          } else {
+            next(options.authRedirect);
+          }
+        });
+      }
+    } else if (token) {
+      // 不需要认证时，如果存在 token，则更新一次用户信息
+      this.fetch().then(() => {
+        // token 有效，跳转
+        next();
+      }).catch(() => {
+        // token 失效，清除 token
+        // hack: 小程序、移动端这里不需要清空 token
+        if (!this.isMobileOrMiniprogram) {
+          this._store.commit(types.CLEAR_TOKENS);
+        }
+
+        next();
+      });
+    } else {
+      next();
+    }
   }
 }
