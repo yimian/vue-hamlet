@@ -168,9 +168,9 @@ export default class Auth {
       console.log('>>>> to: ', to);
       // 嵌入到 iFrame，此时 `document.referrer` 不为空
       const turl = document.referrer;
-      console.log('hamlet---turl', turl);
-      if (turl) {
-        console.log('this.options.parentOrigin--obj---', this.options.parentOrigin);
+      // console.log('hamlet---turl', turl);
+      if (turl && query.token ) {
+        // console.log('this.options.parentOrigin--obj---', this.options.parentOrigin);
         const keys = Object.keys(options.parentOrigin || {});
         let flag = false;
 
@@ -182,14 +182,11 @@ export default class Auth {
           }
         }
 
-        console.log('>>>>>>flag>>>>>>>', flag);
         if (flag) {
-          console.log('---vue-hamlet-location', JSON.parse(JSON.stringify(location)));
+          // console.log('---vue-hamlet-location', JSON.parse(JSON.stringify(location)));
           try {
             // 嵌入了父应用的 token、app_key，就先获取这个用户在当前 APP（如果存在）的 token 信息
-            console.log('>>>>>>query>>>>>', query);
-            console.log('>>>>>>query.token>>>>>', query.token);
-            console.log('>>>>>>query.parent_app_key>>>>>', query.parent_app_key);
+            // console.log('>>>>>>query>>>>>', query);
             if (query.token && query.parent_app_key) {
               this._store.commit(types.SET_TOKEN, query.token);
 
@@ -370,7 +367,6 @@ export default class Auth {
   }
 
   readAppUserToken(params) {
-    console.log('>>>>>start>>>>>readAppUserToken');
     const url = this.options.readAppToken;
     const __randNum = Math.random();
     return this._http.post(url,
